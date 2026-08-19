@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "systemCode": "CRM",
+  "validRequest": {
+    "case": {
+      "globalRequestNo": "REQ-TEST-20260813-000001",
+      "serviceCode": "CRM_ACCOUNT_CHANGE"
+    },
+    "service": {
+      "serviceCode": "CRM_ACCOUNT_CHANGE",
+      "targetSystem": "CRM"
+    },
+    "fields": {
+      "customerCode": "TEST-CUSTOMER-001",
+      "currentOwnerEmployeeId": "TEST-OWNER-OLD",
+      "newOwnerEmployeeId": "TEST-OWNER-NEW",
+      "reason": "连接器受控验收测试数据",
+      "effectiveDate": "2026-08-20"
+    },
+    "requester": {
+      "employeeId": "TEST-EMPLOYEE-001",
+      "departmentId": "TEST-DEPARTMENT-001"
+    },
+    "idempotencyKey": "connector-acceptance-20260813-000001"
+  },
+  "invalidRequest": {
+    "case": {
+      "globalRequestNo": "REQ-TEST-20260813-000002",
+      "serviceCode": "CRM_ACCOUNT_CHANGE"
+    },
+    "service": {
+      "serviceCode": "CRM_ACCOUNT_CHANGE",
+      "targetSystem": "WRONG_TARGET"
+    },
+    "fields": {
+      "customerCode": "TEST-CUSTOMER-001",
+      "currentOwnerEmployeeId": "TEST-OWNER-OLD",
+      "newOwnerEmployeeId": "TEST-OWNER-NEW",
+      "reason": "无效目标系统验收数据",
+      "effectiveDate": "2026-08-20"
+    },
+    "requester": {
+      "employeeId": "TEST-EMPLOYEE-001",
+      "departmentId": "TEST-DEPARTMENT-001"
+    },
+    "idempotencyKey": "connector-acceptance-20260813-invalid"
+  },
+  "conflictingRequest": {
+    "case": {
+      "globalRequestNo": "REQ-TEST-20260813-000001",
+      "serviceCode": "CRM_ACCOUNT_CHANGE"
+    },
+    "service": {
+      "serviceCode": "CRM_ACCOUNT_CHANGE",
+      "targetSystem": "CRM"
+    },
+    "fields": {
+      "customerCode": "TEST-CUSTOMER-001",
+      "currentOwnerEmployeeId": "TEST-OWNER-OLD",
+      "newOwnerEmployeeId": "TEST-OWNER-CONFLICT",
+      "reason": "相同幂等键不同内容验收数据",
+      "effectiveDate": "2026-08-20"
+    },
+    "requester": {
+      "employeeId": "TEST-EMPLOYEE-001",
+      "departmentId": "TEST-DEPARTMENT-001"
+    },
+    "idempotencyKey": "connector-acceptance-20260813-000001"
+  },
+  "rawStatuses": ["OPEN", "WORKING", "NEED_INFO", "RESOLVED", "CLOSED", "REJECTED", "UNKNOWN_TEST_STATUS"]
+}

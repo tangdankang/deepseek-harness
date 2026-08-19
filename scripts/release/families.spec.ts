@@ -1,5 +1,6 @@
 /** Release family discovery, publish order, tag naming, and the bump judgements. */
 
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { releaseFamily, type ReleaseMember } from './families.ts'
 import { compareVersions, nextVendorVersion, reachesPayload } from './bump.ts'
@@ -16,6 +17,14 @@ function member(directory: string, name: string, manifest: Record<string, unknow
 }
 
 describe('release families', () => {
+  it('excludes private workspace applications from the dsh release family', () => {
+    const root = resolve(import.meta.dirname, '../..')
+    const names = releaseFamily('dsh').members(root).map(entry => entry.name)
+
+    expect(names).toContain('@deepseek-ai/dsh')
+    expect(names).not.toContain('demand-platform')
+  })
+
   it('names one tag for the whole dsh family and one per vendored package', () => {
     const dsh = releaseFamily('dsh')
     const vendor = releaseFamily('vendor')

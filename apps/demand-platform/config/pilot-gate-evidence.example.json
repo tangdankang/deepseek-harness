@@ -1,0 +1,14 @@
+{
+  "evidenceClass": null,
+  "pilotDays": null,
+  "criticalSecurityIncidents": null,
+  "duplicateDownstreamTickets": null,
+  "criticalEvalPassRate": null,
+  "routingAccuracy": null,
+  "visualQaPassed": null,
+  "syntheticPilotPassed": null,
+  "rollbackDrillPassed": null,
+  "businessSignoff": null,
+  "securitySignoff": null,
+  "opsSignoff": null
+}

@@ -1,0 +1,10 @@
+.git
+.env
+deploy/.env.production
+deploy/connectors.production.json
+data
+backups
+node_modules
+*.log
+*.zip
+test

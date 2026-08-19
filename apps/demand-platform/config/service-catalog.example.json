@@ -1,0 +1,62 @@
+{
+  "services": [
+    {
+      "serviceCode": "TB_DATA_ISSUE",
+      "serviceName": "TB数据问题报修",
+      "domainCode": "ORG_TB",
+      "ownerTeam": "TB支持组（待确认）",
+      "description": "收集TB数据异常或报表使用问题，并提交到原处理流程。",
+      "targetSystem": "TB",
+      "targetTicketType": "DATA_ISSUE",
+      "riskLevel": "LOW",
+      "aiPolicy": {
+        "answer": true,
+        "collect": true,
+        "submit": true,
+        "directBusinessMutation": false
+      },
+      "audiencePolicy": {
+        "visibility": "DEPARTMENTS",
+        "departmentIds": ["D-ORG", "D-BI"],
+        "includeDescendants": false,
+        "includeEmployeeIds": [],
+        "excludeEmployeeIds": []
+      },
+      "keywords": ["TB", "报表", "数据", "指标", "异常"],
+      "enabled": true,
+      "schema": {
+        "version": 1,
+        "fields": [
+          {
+            "name": "reportName",
+            "label": "报表名称",
+            "type": "string",
+            "required": true,
+            "minLength": 2,
+            "maxLength": 120
+          },
+          {
+            "name": "issueType",
+            "label": "问题类型",
+            "type": "enum",
+            "required": true,
+            "options": [
+              { "value": "NO_DATA", "label": "没有数据" },
+              { "value": "INCORRECT_DATA", "label": "数据不正确" },
+              { "value": "ACCESS", "label": "访问问题" },
+              { "value": "OTHER", "label": "其他" }
+            ]
+          },
+          {
+            "name": "description",
+            "label": "问题描述",
+            "type": "textarea",
+            "required": true,
+            "minLength": 6,
+            "maxLength": 1000
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+data/
+work/
+backups/
+*.log
+*.db
+*.db-shm
+*.db-wal
+.env
+deploy/.env.production
+deploy/connectors.production.json
+node_modules/

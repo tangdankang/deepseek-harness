@@ -1,0 +1,41 @@
+{
+  "name": "demand-platform",
+  "version": "1.17.0",
+  "private": true,
+  "type": "module",
+  "description": "企业统一需求平台：服务目录、动态表单、确认令牌、幂等建单、连接器、状态回传和审计。",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.mjs",
+    "test": "node --test --test-concurrency=1 test/*.test.mjs",
+    "catalog:check": "node scripts/import-service-catalog.mjs --file config/service-catalog.example.json --dry-run",
+    "organization:check": "node scripts/import-organization-directory.mjs --file config/organization-directory.example.json --dry-run",
+    "knowledge:check": "node scripts/import-knowledge-catalog.mjs --file config/knowledge-catalog.example.json --dry-run",
+    "connectors:check": "node scripts/validate-connector-config.mjs --file deploy/connectors.production.example.json --production",
+    "connectors:acceptance": "node scripts/run-connector-acceptance.mjs --config deploy/connectors.production.example.json --fixture config/connector-acceptance-fixture.example.json",
+    "connectors:acceptance:local": "node scripts/run-local-connector-acceptance.mjs",
+    "capacity:test": "node scripts/run-capacity-test.mjs --virtual-employees 3000 --requests 9000 --concurrency 100 --thresholds-file config/capacity-thresholds.example.json",
+    "capacity:local": "node scripts/run-local-capacity-test.mjs --virtual-employees 3000 --requests 9000 --concurrency 100 --target-rps 300",
+    "eval:check": "node scripts/run-agent-evals.mjs --file evals/mvp-smoke.jsonl --validate-only",
+    "pilot:report": "node scripts/generate-pilot-report.mjs --endpoint http://127.0.0.1:8787 --days 7 --format markdown",
+    "pilot:gate": "node scripts/evaluate-pilot-gate.mjs --endpoint http://127.0.0.1:8787 --evidence config/pilot-gate-evidence.example.json --days 7 --format markdown",
+    "worker:once": "node scripts/run-integration-worker.mjs --database data/demand-platform.db --limit 20",
+    "worker:watch": "node scripts/run-integration-worker.mjs --database data/demand-platform.db --limit 20 --watch --interval-ms 5000",
+    "reconcile:once": "node scripts/reconcile-external-tickets.mjs --database data/demand-platform.db --connector-config deploy/connectors.production.json --limit 20",
+    "db:backup": "node scripts/backup-database.mjs --database data/demand-platform.db --output backups/demand-platform.db",
+    "db:rollback-drill": "node scripts/run-rollback-drill.mjs --database data/demand-platform.db --drill-directory work/rollback-drill",
+    "data:lifecycle": "node scripts/run-data-lifecycle.mjs --database data/demand-platform.db --policy config/data-lifecycle-policy.example.json",
+    "data:hold": "node scripts/manage-data-retention-hold.mjs",
+    "production:gate": "node scripts/evaluate-production-readiness.mjs --manifest config/production-readiness-manifest.example.json",
+    "topology:acceptance": "node scripts/run-runtime-topology-acceptance.mjs --samples 20",
+    "identity:lifecycle:acceptance": "node scripts/run-identity-lifecycle-conformance.mjs",
+    "audit:verify": "node scripts/verify-audit-chain.mjs --database data/demand-platform.db",
+    "deploy:check": "node scripts/validate-deployment-reference.mjs",
+    "intake:self-test": "python tools/audit_p0_intake.py --self-test",
+    "knowledge:draft:self-test": "python tools/build_knowledge_draft.py --self-test",
+    "knowledge:python-bridge:self-test": "python tools/import_knowledge_catalog.py --self-test",
+    "verify": "node scripts/verify-release.mjs"
+  }
+}

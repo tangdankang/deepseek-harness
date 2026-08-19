@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "connectors": [
+    {
+      "type": "http-json",
+      "systemCode": "CRM",
+      "baseUrl": "https://crm-test.company.example",
+      "timeoutMs": 10000,
+      "maxResponseBytes": 1048576,
+      "auth": {
+        "type": "bearer-env",
+        "envVar": "CRM_CONNECTOR_TOKEN"
+      },
+      "createTicket": {
+        "path": "/api/v1/tickets",
+        "method": "POST",
+        "idempotencyHeader": "Idempotency-Key",
+        "headers": {
+          "X-Client-System": "AI_DEMAND_PLATFORM"
+        },
+        "services": {
+          "CRM_ACCOUNT_CHANGE": {
+            "requestMapping": {
+              "global_request_no": "case.globalRequestNo",
+              "service_code": "case.serviceCode",
+              "ticket_type": {
+                "value": "ACCOUNT_CHANGE"
+              },
+              "requester.employee_id": "requester.employeeId",
+              "requester.department_id": "requester.departmentId",
+              "payload.customer_no": "fields.customerCode",
+              "payload.current_owner_employee_id": "fields.currentOwnerEmployeeId",
+              "payload.new_owner_employee_id": "fields.newOwnerEmployeeId",
+              "payload.reason": "fields.reason",
+              "payload.effective_date": "fields.effectiveDate"
+            }
+          }
+        },
+        "responseMapping": {
+          "ticketNo": "data.ticket_no",
+          "rawStatus": "data.status",
+          "ticketUrl": "data.ticket_url"
+        }
+      },
+      "getTicket": {
+        "pathTemplate": "/api/v1/tickets/{ticketNo}",
+        "method": "GET",
+        "headers": {
+          "X-Client-System": "AI_DEMAND_PLATFORM"
+        },
+        "responseMapping": {
+          "ticketNo": "data.ticket_no",
+          "rawStatus": "data.status",
+          "ticketUrl": "data.ticket_url"
+        }
+      },
+      "statusMapping": {
+        "OPEN": "SUBMITTED",
+        "WORKING": "IN_PROGRESS",
+        "NEED_INFO": "WAITING_USER",
+        "RESOLVED": "RESOLVED",
+        "CLOSED": "CLOSED",
+        "REJECTED": "REJECTED"
+      },
+      "unknownStatus": "IN_PROGRESS"
+    }
+  ]
+}

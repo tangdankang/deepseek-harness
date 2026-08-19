@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "packageId": "P0-ORG-YYYYMMDD",
+  "packageType": "ORGANIZATION_DIRECTORY",
+  "systemCode": "ORG",
+  "contacts": {
+    "businessOwner": "待提供",
+    "technicalOwner": "待提供",
+    "securityOwner": "待提供",
+    "identityOwner": "待提供",
+    "dataOwner": "待提供",
+    "operationsOwner": "待提供"
+  },
+  "network": {
+    "testSourceAlias": "待提供",
+    "accessMethod": "待提供",
+    "allowlistOwner": "待提供"
+  },
+  "evidence": [
+    { "category": "ORGANIZATION_TREE", "path": "组织/组织架构.xlsx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "IDENTITY_CONTEXT", "path": "身份/身份网关字段与签名规范.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "HIERARCHY_RULES", "path": "组织/层级继承与停用规则.docx", "classification": "INTERNAL", "containsCredential": false, "sha256": "" },
+    { "category": "MATRIX_MEMBERSHIP", "path": "组织/矩阵组织与多部门规则.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "SYNC_SLA", "path": "同步/组织同步SLA.md", "classification": "INTERNAL", "containsCredential": false, "sha256": "" },
+    { "category": "SERVICE_AUDIENCE", "path": "服务/首批服务受众.xlsx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "SECURITY_CLASSIFICATION", "path": "安全/组织数据分级与保留说明.docx", "classification": "INTERNAL", "containsCredential": false, "sha256": "" }
+  ]
+}

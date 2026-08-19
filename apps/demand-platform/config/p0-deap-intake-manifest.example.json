@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "packageId": "P0-DEAP-YYYYMMDD",
+  "packageType": "DEAP_TENANT",
+  "systemCode": "DEAP",
+  "contacts": {
+    "businessOwner": "待提供",
+    "technicalOwner": "待提供",
+    "securityOwner": "待提供",
+    "tenantAdmin": "待提供"
+  },
+  "evidence": [
+    {
+      "category": "CURRENT_TENANT_DOCS",
+      "path": "租户资料/当前开发文档.pdf",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "AGENT_CONFIGURATION",
+      "path": "租户资料/Agent配置截图与说明.docx",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "TOOL_PROTOCOL",
+      "path": "租户资料/工具调用协议.pdf",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "IDENTITY_CONTEXT",
+      "path": "身份/员工上下文字段与签名规范.docx",
+      "classification": "CONFIDENTIAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "SECURITY_SCOPE",
+      "path": "安全/应用权限与数据范围.xlsx",
+      "classification": "CONFIDENTIAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "TEST_ACCOUNT_PLAN",
+      "path": "测试/测试账号角色计划-无密码.xlsx",
+      "classification": "CONFIDENTIAL",
+      "containsCredential": false,
+      "sha256": ""
+    }
+  ]
+}

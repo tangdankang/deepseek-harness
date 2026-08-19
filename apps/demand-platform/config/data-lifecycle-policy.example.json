@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "maxBackupAgeMinutes": 60,
+  "rules": {
+    "auth_sessions": { "enabled": true, "retentionDays": 7 },
+    "operator_sessions": { "enabled": true, "retentionDays": 7 },
+    "identity_ticket_uses": { "enabled": true, "retentionDays": 7 },
+    "tool_invocations": { "enabled": true, "retentionDays": 90 },
+    "assistant_interactions": { "enabled": false, "retentionDays": 180 },
+    "employee_feedback": { "enabled": false, "retentionDays": 365 },
+    "webhook_events": { "enabled": false, "retentionDays": 180 }
+  }
+}

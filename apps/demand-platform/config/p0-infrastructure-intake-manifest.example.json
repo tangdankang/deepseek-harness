@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "packageId": "P0-INFRA-YYYYMMDD",
+  "packageType": "INFRASTRUCTURE",
+  "systemCode": "PLATFORM",
+  "contacts": {
+    "architectureOwner": "待提供",
+    "databaseOwner": "待提供",
+    "platformOwner": "待提供",
+    "securityOwner": "待提供",
+    "operationsOwner": "待提供"
+  },
+  "network": {
+    "testEnvironmentAlias": "待提供",
+    "accessMethod": "待提供",
+    "allowlistOwner": "待提供"
+  },
+  "evidence": [
+    { "category": "PLATFORM_STANDARD", "path": "平台/应用部署与开发规范.docx", "classification": "INTERNAL", "containsCredential": false, "sha256": "" },
+    { "category": "DATABASE_SPEC", "path": "数据/数据库选型与接入规范.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "CACHE_SPEC", "path": "数据/缓存服务接入规范.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "TASK_PLATFORM_SPEC", "path": "任务/消息队列与调度规范.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "DEPLOYMENT_TOPOLOGY", "path": "部署/目标部署拓扑.pdf", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "NETWORK_GATEWAY", "path": "网络/网关WAF与TLS规范.xlsx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "KMS_SPEC", "path": "安全/KMS与密钥注入规范.docx", "classification": "RESTRICTED", "containsCredential": false, "sha256": "" },
+    { "category": "OBSERVABILITY_SPEC", "path": "运维/监控日志告警规范.docx", "classification": "INTERNAL", "containsCredential": false, "sha256": "" },
+    { "category": "DR_REQUIREMENTS", "path": "灾备/RPO-RTO与恢复要求.docx", "classification": "CONFIDENTIAL", "containsCredential": false, "sha256": "" },
+    { "category": "CAPACITY_SLO", "path": "容量/容量与SLO目标.xlsx", "classification": "INTERNAL", "containsCredential": false, "sha256": "" }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "maxErrorRate": 0,
+  "maxP95Ms": 2000,
+  "minCrossEmployeeDenialRate": 1,
+  "minIdempotentReplayRate": 1,
+  "maxDuplicateTicketFindings": 0
+}

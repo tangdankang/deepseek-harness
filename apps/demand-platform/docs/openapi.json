@@ -1,0 +1,200 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AI统一需求平台 DEAP 工具 API",
+    "version": "0.2.0",
+    "description": "供钉钉 DEAP Agent 通过技能网关调用。生产环境必须由可信网关从钉钉身份令牌派生员工上下文，不得信任终端用户直接传入的身份请求头。每次调用建议提供唯一X-Tool-Invocation-Id，用于防重放和跨系统追踪。"
+  },
+  "servers": [
+    { "url": "https://ai-demand-api.example.internal", "description": "替换为公司测试或生产网关地址" }
+  ],
+  "security": [{ "ToolKey": [], "IdentitySignature": [], "IdentityTimestamp": [] }],
+  "paths": {
+    "/api/v1/tools/search-service-catalog": {
+      "post": {
+        "operationId": "search_service_catalog",
+        "summary": "按员工问题检索其可见服务目录",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string", "minLength": 1, "maxLength": 500 } }, "additionalProperties": false } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/get-service-form-schema": {
+      "post": {
+        "operationId": "get_service_form_schema",
+        "summary": "读取服务及其动态表单 Schema",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ServiceCode" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/get-employee-context": {
+      "post": {
+        "operationId": "get_employee_context",
+        "summary": "读取最小必要员工身份上下文",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "type": "object", "additionalProperties": false } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/search-knowledge": {
+      "post": {
+        "operationId": "search_knowledge",
+        "summary": "按员工权限检索组织中心知识",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string", "minLength": 1, "maxLength": 2000 } }, "additionalProperties": false } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "401": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/validate-request-draft": {
+      "post": {
+        "operationId": "validate_request_draft",
+        "summary": "校验草稿字段、必填项和格式",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["serviceCode", "fields"], "properties": { "serviceCode": { "$ref": "#/components/schemas/ServiceCode" }, "fields": { "$ref": "#/components/schemas/Fields" } }, "additionalProperties": false } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/create-or-update-draft": {
+      "post": {
+        "operationId": "create_or_update_draft",
+        "summary": "创建或按版本更新统一需求草稿，不提交下游",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/EmployeeName" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  { "type": "object", "required": ["serviceCode", "fields"], "properties": { "serviceCode": { "$ref": "#/components/schemas/ServiceCode" }, "fields": { "$ref": "#/components/schemas/Fields" }, "conversationId": { "type": ["string", "null"], "maxLength": 120 } }, "additionalProperties": false },
+                  { "type": "object", "required": ["globalRequestNo", "expectedVersion", "fields"], "properties": { "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" }, "expectedVersion": { "type": "integer", "minimum": 1 }, "fields": { "$ref": "#/components/schemas/Fields" } }, "additionalProperties": false }
+                ]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "201": { "$ref": "#/components/responses/Success" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/prepare-confirmation": {
+      "post": {
+        "operationId": "prepare_confirmation",
+        "summary": "固化草稿版本并生成提交预览与短期确认令牌",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/RequestNo" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/submit-request": {
+      "post": {
+        "operationId": "submit_request",
+        "summary": "员工确认后幂等提交下游工单",
+        "description": "Agent 仅在员工明确确认当前预览后调用。服务端再次验证员工、草稿版本、确认令牌和幂等键。",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["globalRequestNo", "draftVersion", "confirmationToken", "idempotencyKey"], "properties": { "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" }, "draftVersion": { "type": "integer", "minimum": 1 }, "confirmationToken": { "type": "string", "minLength": 20 }, "idempotencyKey": { "type": "string", "minLength": 12, "maxLength": 180 } }, "additionalProperties": false } } } },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/get-request-status": {
+      "post": {
+        "operationId": "get_request_status",
+        "summary": "查询本人有权查看的统一需求和下游工单状态",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/RequestNo" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/handoff-to-human": {
+      "post": {
+        "operationId": "handoff_to_human",
+        "summary": "经员工明确确认后创建人工受理事项",
+        "description": "仅在知识/服务无法可靠匹配、工具失败或员工主动要求人工受理时调用。employeeConfirmed必须对应当前会话中的明确同意。",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/EmployeeName" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["employeeConfirmed", "originalMessage", "summary", "reasonCode", "idempotencyKey"], "properties": { "employeeConfirmed": { "const": true }, "originalMessage": { "type": "string", "minLength": 1, "maxLength": 4000 }, "summary": { "type": "string", "minLength": 4, "maxLength": 1000 }, "reasonCode": { "type": "string", "enum": ["NO_MATCH", "KNOWLEDGE_CONFLICT", "TOOL_FAILURE", "USER_REQUEST", "OTHER"] }, "conversationId": { "type": ["string", "null"], "maxLength": 120 }, "idempotencyKey": { "type": "string", "minLength": 12, "maxLength": 180 } }, "additionalProperties": false } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/get-handoff-status": {
+      "post": {
+        "operationId": "get_handoff_status",
+        "summary": "查询本人有权查看的人工受理状态",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "$ref": "#/components/requestBodies/HandoffNo" },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/record-feedback": {
+      "post": {
+        "operationId": "record_feedback",
+        "summary": "仅根据员工明确评价记录结构化反馈",
+        "description": "不得推断满意度或解决结果；employeeConfirmed必须对应员工当前消息中的明确评价。不接收自由文本。",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["employeeConfirmed", "subjectType", "subjectId", "resolved", "idempotencyKey"], "properties": { "employeeConfirmed": { "const": true }, "subjectType": { "type": "string", "enum": ["CONVERSATION", "CASE", "HANDOFF"] }, "subjectId": { "type": "string", "minLength": 4, "maxLength": 120 }, "resolved": { "type": "boolean" }, "rating": { "type": ["integer", "null"], "minimum": 1, "maximum": 5 }, "reasonCodes": { "type": "array", "maxItems": 5, "uniqueItems": true, "items": { "type": "string", "enum": ["ANSWER_HELPFUL", "ANSWER_INCORRECT", "MISSING_INFORMATION", "WRONG_SERVICE", "TOO_COMPLEX", "TOOL_FAILED", "OTHER"] } }, "idempotencyKey": { "type": "string", "minLength": 12, "maxLength": 180 } }, "additionalProperties": false } } } },
+        "responses": { "201": { "$ref": "#/components/responses/Success" }, "404": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    },
+    "/api/v1/tools/guided-request-turn": {
+      "post": {
+        "operationId": "guided_request_turn",
+        "summary": "按服务Schema跨轮收集字段、生成确认预览，并只在员工明确确认后提交",
+        "description": "Agent只传递从当前员工消息中提取的结构化fieldUpdates；平台执行字段白名单、类型、版本、会话归属和显式确认校验。COLLECT绝不创建下游工单。",
+        "parameters": [{ "$ref": "#/components/parameters/EmployeeId" }, { "$ref": "#/components/parameters/DepartmentId" }, { "$ref": "#/components/parameters/EmployeeName" }, { "$ref": "#/components/parameters/ToolInvocationId" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  { "type": "object", "required": ["action", "serviceCode", "fieldUpdates"], "properties": { "action": { "const": "COLLECT" }, "serviceCode": { "$ref": "#/components/schemas/ServiceCode" }, "conversationId": { "type": "string", "maxLength": 120 }, "fieldUpdates": { "$ref": "#/components/schemas/Fields" } }, "additionalProperties": false },
+                  { "type": "object", "required": ["action", "globalRequestNo", "fieldUpdates"], "properties": { "action": { "const": "COLLECT" }, "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" }, "conversationId": { "type": "string", "maxLength": 120 }, "expectedVersion": { "type": "integer", "minimum": 1 }, "fieldUpdates": { "$ref": "#/components/schemas/Fields" } }, "additionalProperties": false },
+                  { "type": "object", "required": ["action", "globalRequestNo"], "properties": { "action": { "const": "PREPARE_CONFIRMATION" }, "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" }, "conversationId": { "type": "string", "maxLength": 120 } }, "additionalProperties": false },
+                  { "type": "object", "required": ["action", "globalRequestNo", "draftVersion", "confirmationToken", "idempotencyKey", "employeeConfirmed"], "properties": { "action": { "const": "CONFIRM_SUBMIT" }, "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" }, "conversationId": { "type": "string", "maxLength": 120 }, "draftVersion": { "type": "integer", "minimum": 1 }, "confirmationToken": { "type": "string", "minLength": 20 }, "idempotencyKey": { "type": "string", "minLength": 12, "maxLength": 180 }, "employeeConfirmed": { "const": true } }, "additionalProperties": false }
+                ]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/Success" }, "400": { "$ref": "#/components/responses/Error" }, "409": { "$ref": "#/components/responses/Error" }, "422": { "$ref": "#/components/responses/Error" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ToolKey": { "type": "apiKey", "in": "header", "name": "X-Tool-Key", "description": "由 DEAP 技能网关保管并轮换，不暴露给终端员工。" },
+      "IdentitySignature": { "type": "apiKey", "in": "header", "name": "X-Identity-Signature", "description": "可信身份网关注入的员工上下文HMAC；模型不生成。" },
+      "IdentityTimestamp": { "type": "apiKey", "in": "header", "name": "X-Identity-Timestamp", "description": "身份签名使用的Unix秒时间戳；模型不生成。" }
+    },
+    "parameters": {
+      "EmployeeId": { "name": "X-Employee-Id", "in": "header", "required": true, "description": "可信身份网关从钉钉登录态派生。", "schema": { "type": "string", "minLength": 1, "maxLength": 80 } },
+      "DepartmentId": { "name": "X-Department-Id", "in": "header", "required": true, "description": "可信身份网关从钉钉通讯录派生。", "schema": { "type": "string", "minLength": 1, "maxLength": 80 } },
+      "EmployeeName": { "name": "X-Employee-Name", "in": "header", "required": false, "schema": { "type": "string", "maxLength": 120 } },
+      "ToolInvocationId": { "name": "X-Tool-Invocation-Id", "in": "header", "required": false, "description": "由技能网关为每次HTTP尝试生成的唯一调用编号；重复编号返回409。未提供时由平台生成并在响应头返回。", "schema": { "type": "string", "minLength": 8, "maxLength": 128, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$" } }
+    },
+    "schemas": {
+      "ServiceCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+      "RequestNo": { "type": "string", "pattern": "^REQ-[0-9]{8}-[0-9]{6}$" },
+      "HandoffNo": { "type": "string", "pattern": "^HOF-[0-9]{8}-[0-9]{6}$" },
+      "Fields": { "type": "object", "additionalProperties": true },
+      "Error": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": ["code", "message", "traceId"],
+            "properties": { "code": { "type": "string" }, "message": { "type": "string" }, "details": {}, "traceId": { "type": "string", "format": "uuid" } }
+          }
+        }
+      }
+    },
+    "requestBodies": {
+      "ServiceCode": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["serviceCode"], "properties": { "serviceCode": { "$ref": "#/components/schemas/ServiceCode" } }, "additionalProperties": false } } } },
+      "RequestNo": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["globalRequestNo"], "properties": { "globalRequestNo": { "$ref": "#/components/schemas/RequestNo" } }, "additionalProperties": false } } } },
+      "HandoffNo": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["handoffNo"], "properties": { "handoffNo": { "$ref": "#/components/schemas/HandoffNo" } }, "additionalProperties": false } } } }
+    },
+    "responses": {
+      "Success": { "description": "成功。具体返回结构由工具 Schema 固定，并包含业务数据。响应头X-Tool-Invocation-Id用于跨系统追踪。", "content": { "application/json": { "schema": { "type": "object", "additionalProperties": true } } } },
+      "Error": { "description": "失败。Agent 应根据 code 澄清、重试或转人工，不得宣称操作成功。已通过身份鉴权的调用会在响应头返回X-Tool-Invocation-Id。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+    }
+  }
+}

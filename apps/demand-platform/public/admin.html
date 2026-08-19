@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>组织中心 AI 运营工作台</title>
+  <link rel="stylesheet" href="/admin.css">
+</head>
+<body>
+  <section id="login-view" class="login-view">
+    <div class="login-brand">
+      <span class="brand-mark">AI</span>
+      <div>
+        <p>组织中心 · 统一需求平台</p>
+        <h1>运营管理工作台</h1>
+      </div>
+    </div>
+    <form id="login-form" class="login-card">
+      <p class="eyebrow">OPERATIONS ACCESS</p>
+      <h2>进入工作台</h2>
+      <p class="muted">正式环境请从公司管理入口进入。本地试点可使用独立 Admin Key 创建短期 HttpOnly 管理会话。</p>
+      <label>运营人员编号<input id="operator-id" name="operator-id" value="LOCAL-OPS" maxlength="128" required></label>
+      <label>显示名称<input id="operator-name" name="operator-name" value="本地运营管理员" maxlength="200" required></label>
+      <label>Admin Key<input id="admin-key" name="admin-key" type="password" autocomplete="off" required></label>
+      <button type="submit" class="primary wide">安全登录</button>
+      <p id="login-error" class="form-error" role="alert"></p>
+      <p class="security-note">密钥只用于本次 HTTPS 登录请求，不写入 LocalStorage、SessionStorage 或数据库。</p>
+    </form>
+  </section>
+
+  <div id="app-shell" class="app-shell" hidden>
+    <aside class="sidebar">
+      <div class="side-brand"><span class="brand-mark small">AI</span><div><strong>运营工作台</strong><small>组织中心</small></div></div>
+      <nav id="main-nav" aria-label="管理功能">
+        <button data-view="overview" data-permission="VIEW_OVERVIEW" class="active"><span>概</span>运营总览</button>
+        <button data-view="handoffs" data-permission="VIEW_HANDOFFS"><span>人</span>人工队列</button>
+        <button data-view="cases" data-permission="VIEW_CASES"><span>需</span>需求台账</button>
+        <button data-view="integrations" data-permission="VIEW_INTEGRATIONS"><span>链</span>集成任务</button>
+        <button data-view="sessions" data-permission="MANAGE_SESSIONS"><span>安</span>会话安全</button>
+        <button data-view="tool-calls" data-permission="VIEW_AUDIT"><span>调</span>Agent调用</button>
+        <button data-view="audit" data-permission="VIEW_AUDIT"><span>审</span>审计事件</button>
+      </nav>
+      <div class="side-foot"><span class="status-dot"></span><span>管理会话已加密</span></div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div><p id="breadcrumb">运营总览</p><h1 id="page-title">今天需要关注什么</h1></div>
+        <div class="operator-box"><div class="operator-avatar" id="operator-avatar">运</div><div><strong id="operator-name-display">运营人员</strong><small id="operator-role-display">—</small></div><button id="logout-button" class="ghost">退出</button></div>
+      </header>
+
+      <div id="toast" class="toast" role="status" hidden></div>
+
+      <section id="view-overview" class="view active-view">
+        <div class="view-actions"><div><p class="eyebrow">REAL-TIME SNAPSHOT</p><h2>平台运行快照</h2></div><div><select id="metrics-days" aria-label="指标周期"><option value="7">近7天</option><option value="14">近14天</option><option value="30">近30天</option></select><button id="refresh-overview" class="secondary">刷新数据</button></div></div>
+        <div id="overview-cards" class="metric-grid"></div>
+        <div class="two-columns">
+          <article class="panel"><div class="panel-head"><div><p class="eyebrow">FLOW</p><h3>需求与人工队列</h3></div></div><div id="flow-summary" class="status-list"></div></article>
+          <article class="panel"><div class="panel-head"><div><p class="eyebrow">QUALITY</p><h3>试点核心指标</h3></div></div><div id="indicator-summary" class="indicator-list"></div></article>
+        </div>
+      </section>
+
+      <section id="view-handoffs" class="view">
+        <div class="view-actions"><div><p class="eyebrow">HUMAN HANDOFF</p><h2>人工受理队列</h2></div><div><select id="handoff-filter" aria-label="人工队列状态"><option value="">全部状态</option><option value="OPEN">待分派</option><option value="ASSIGNED">处理中</option><option value="RESOLVED">已解决</option><option value="CLOSED">已关闭</option></select><button id="refresh-handoffs" class="secondary">刷新</button></div></div>
+        <div id="handoff-list" class="card-list"></div>
+      </section>
+
+      <section id="view-cases" class="view">
+        <div class="view-actions"><div><p class="eyebrow">DEMAND LEDGER</p><h2>统一需求台账</h2></div><div><select id="case-filter" aria-label="需求状态"><option value="">全部状态</option><option value="WAITING_INFORMATION">待补信息</option><option value="WAITING_CONFIRMATION">待确认</option><option value="SUBMITTING">提交中</option><option value="SUBMITTED">已提交</option><option value="IN_PROGRESS">处理中</option><option value="RESOLVED">已解决</option><option value="SUBMIT_FAILED">提交失败</option></select><button id="refresh-cases" class="secondary">刷新</button></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>统一编号</th><th>服务</th><th>申请人</th><th>状态</th><th>下游</th><th>更新时间</th></tr></thead><tbody id="case-table"></tbody></table></div>
+      </section>
+
+      <section id="view-integrations" class="view">
+        <div class="view-actions"><div><p class="eyebrow">INTEGRATION OUTBOX</p><h2>业务系统集成任务</h2></div><div id="integration-actions"><select id="integration-filter" aria-label="集成任务状态"><option value="">全部状态</option><option value="PENDING">待执行</option><option value="RUNNING">执行中</option><option value="RETRY_WAIT">等待重试</option><option value="DEAD">死信</option><option value="SUCCEEDED">成功</option></select><button id="run-worker" class="secondary" data-action-permission="MANAGE_INTEGRATIONS">执行到期任务</button><button id="reconcile-tickets" class="primary" data-action-permission="MANAGE_INTEGRATIONS">主动对账</button></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>任务</th><th>系统</th><th>状态</th><th>尝试</th><th>下次执行</th><th>错误</th><th>操作</th></tr></thead><tbody id="integration-table"></tbody></table></div>
+      </section>
+
+      <section id="view-sessions" class="view">
+        <div class="view-actions"><div><p class="eyebrow">ACCESS CONTROL</p><h2>员工会话安全</h2></div><button id="refresh-sessions" class="secondary">刷新</button></div>
+        <form id="revoke-form" class="security-form"><label>员工编号<input id="revoke-employee" maxlength="128" placeholder="例如 E10001" required></label><label>撤销原因<select id="revoke-reason"><option value="EMPLOYEE_DISABLED">账号停用</option><option value="EMPLOYEE_LEFT">员工离职</option><option value="SECURITY_EVENT">安全事件</option><option value="ROLE_CHANGE">角色/岗位变化</option><option value="ADMIN_REQUEST">管理员请求</option></select></label><button type="submit" class="danger">撤销全部有效会话</button></form>
+        <div class="panel table-panel"><table><thead><tr><th>员工</th><th>部门</th><th>有效会话</th><th>最近登录</th><th>最晚过期</th><th>操作</th></tr></thead><tbody id="session-table"></tbody></table></div>
+      </section>
+
+      <section id="view-audit" class="view">
+        <div class="view-actions"><div><p class="eyebrow">AUDIT TRAIL</p><h2>平台审计事件</h2></div><div><select id="audit-outcome" aria-label="审计结果"><option value="">全部结果</option><option value="SUCCESS">成功</option><option value="FAILURE">失败</option></select><button id="refresh-audit" class="secondary">刷新</button></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>结果</th><th>关联需求</th><th>Trace ID</th></tr></thead><tbody id="audit-table"></tbody></table></div>
+      </section>
+
+      <section id="view-tool-calls" class="view">
+        <div class="view-actions"><div><p class="eyebrow">AGENT TOOL TRACE</p><h2>DEAP 工具调用</h2></div><div><select id="tool-call-operation" aria-label="工具操作"><option value="">全部工具</option><option value="search_service_catalog">服务检索</option><option value="get_service_form_schema">表单Schema</option><option value="get_employee_context">员工上下文</option><option value="search_knowledge">知识检索</option><option value="validate_request_draft">草稿校验</option><option value="create_or_update_draft">草稿写入</option><option value="prepare_confirmation">确认预览</option><option value="submit_request">需求提交</option><option value="get_request_status">需求状态</option><option value="handoff_to_human">人工接管</option><option value="get_handoff_status">接管状态</option><option value="record_feedback">结构化反馈</option></select><select id="tool-call-outcome" aria-label="调用结果"><option value="">全部结果</option><option value="SUCCESS">成功</option><option value="FAILURE">失败</option><option value="RUNNING">执行中</option></select><button id="refresh-tool-calls" class="secondary">刷新</button></div></div>
+        <div class="panel table-panel"><table><thead><tr><th>时间</th><th>调用编号</th><th>工具</th><th>部门</th><th>结果</th><th>HTTP / 错误</th><th>耗时</th><th>Trace ID</th></tr></thead><tbody id="tool-call-table"></tbody></table></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="handoff-dialog">
+    <form id="handoff-form" method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow">UPDATE HANDOFF</p><h2 id="handoff-dialog-title">更新人工事项</h2></div><button id="close-handoff-dialog" type="button" class="icon-button" aria-label="关闭">×</button></div>
+      <input id="handoff-no" type="hidden">
+      <label>目标状态<select id="handoff-status"><option value="ASSIGNED">分派处理中</option><option value="RESOLVED">标记已解决</option><option value="CLOSED">关闭事项</option></select></label>
+      <label>处理人<input id="handoff-assignee" maxlength="100"></label>
+      <label>处理结果<textarea id="handoff-resolution" maxlength="2000" rows="5"></textarea></label>
+      <div class="dialog-actions"><button id="cancel-handoff-dialog" type="button" class="ghost">取消</button><button id="save-handoff" type="submit" class="primary">保存变更</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>组织中心 AI 服务台</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">组织中心 · 统一需求入口</p>
+      <h1>AI 服务台</h1>
+    </div>
+    <div class="identity"><span class="avatar">演</span><div><strong>演示员工</strong><small>E10001 · 组织中心</small></div></div>
+  </header>
+
+  <main class="layout">
+    <section class="panel assistant-panel">
+      <div class="panel-heading"><div><span class="step">1</span><h2>先问 AI</h2></div><span class="badge">回答有据 · 操作需确认</span></div>
+      <div id="messages" class="messages" aria-live="polite" aria-label="AI服务对话">
+        <article class="message assistant"><div class="bubble">你好，我可以先回答组织中心常见问题，也可以帮你选择服务、收集信息并生成工单预览。<br><strong>试试：</strong>“客户归属怎么改？”或“ERP物料主数据有问题”。</div></article>
+      </div>
+      <form id="chat-form" class="composer">
+        <textarea id="chat-input" rows="2" placeholder="描述问题、期望结果、涉及系统或已有需求编号……" required></textarea>
+        <button class="primary" type="submit">发送</button>
+      </form>
+    </section>
+
+    <aside class="side-column">
+      <section class="panel">
+        <div class="panel-heading"><div><span class="step">2</span><h2>选择服务</h2></div></div>
+        <div id="service-list" class="service-list"><p class="muted">正在加载服务目录……</p></div>
+      </section>
+      <section class="panel">
+        <div class="panel-heading"><div><span class="step">3</span><h2>我的需求与人工受理</h2></div><button id="refresh-cases" class="ghost">刷新</button></div>
+        <div id="case-list" class="case-list"><p class="muted">暂无需求</p></div>
+      </section>
+    </aside>
+  </main>
+
+  <dialog id="service-dialog">
+    <form id="service-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">动态表单</p><h2 id="dialog-title">服务申请</h2><p id="dialog-description" class="muted"></p></div><button type="button" class="icon-button" id="close-dialog" aria-label="关闭">×</button></div>
+      <div id="form-fields" class="form-fields"></div>
+      <div id="form-error" class="error-box hidden"></div>
+      <div class="dialog-actions"><button type="button" id="cancel-dialog" class="ghost">取消</button><button type="submit" class="primary">生成提交预览</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog">
+    <div class="dialog-heading"><div><p class="eyebrow">员工确认</p><h2>请检查后再提交</h2></div><button type="button" class="icon-button" id="close-confirm" aria-label="关闭">×</button></div>
+    <div id="preview"></div>
+    <div class="notice">确认后才会调用下游建单接口；系统不会直接修改 CRM/OA/ERP 业务主数据。</div>
+    <div id="submit-error" class="error-box hidden"></div>
+    <div class="dialog-actions"><button type="button" id="back-edit" class="ghost">返回修改</button><button type="button" id="confirm-submit" class="primary danger-safe">确认并提交</button></div>
+  </dialog>
+
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

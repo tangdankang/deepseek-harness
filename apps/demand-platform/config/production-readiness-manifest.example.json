@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "releaseVersion": "1.17.0",
+  "targetEnvironment": "PRODUCTION",
+  "deploymentModel": "HIGH_AVAILABILITY",
+  "changeRef": "CHG-PENDING-001",
+  "evidence": {
+    "releaseVerification": null,
+    "runtimeTopology": null,
+    "deapConformance": null,
+    "identityLifecycleConformance": null,
+    "connectorAcceptance": null,
+    "realEmployeePilot": null,
+    "remoteCapacity": null,
+    "securityAssessment": null,
+    "backupRestore": null,
+    "disasterRecovery": null,
+    "monitoringAlerting": null,
+    "dataGovernance": null,
+    "changeRollback": null
+  },
+  "approvals": {
+    "business": null,
+    "security": null,
+    "operations": null,
+    "dataProtection": null
+  }
+}

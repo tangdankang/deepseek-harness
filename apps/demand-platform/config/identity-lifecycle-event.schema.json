@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ai-demand-platform:identity-lifecycle-event:v1",
+  "title": "统一需求平台身份生命周期事件",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "sourceSystem", "employeeId", "sequence", "eventType", "occurredAt", "reasonCode"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "eventId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}$" },
+    "sourceSystem": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}$" },
+    "employeeId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}$" },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "eventType": {
+      "enum": ["ACCESS_SUSPENDED", "EMPLOYMENT_TERMINATED", "ACCESS_RESTORED", "MEMBERSHIP_CHANGED", "IDENTITY_PROFILE_CHANGED"]
+    },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "reasonCode": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" }
+  }
+}

@@ -1,0 +1,103 @@
+groups:
+  - name: ai-demand-platform.availability
+    rules:
+      - alert: AIDemandPlatformUnavailable
+        expr: absent(ai_demand_build_info) or max(up{job="ai-demand-platform"}) == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: AI统一需求平台不可采集或不可用
+          runbook: docs/monitoring-and-alerting.md#平台不可用
+
+      - alert: AIDemandPlatformHighServerErrorRate
+        expr: sum(rate(ai_demand_http_requests_total{status_class="5xx"}[5m])) / clamp_min(sum(rate(ai_demand_http_requests_total[5m])), 0.001) > 0.02
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: AI统一需求平台5xx比例超过2%
+          runbook: docs/monitoring-and-alerting.md#高服务端错误率
+
+      - alert: AIDemandPlatformHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(ai_demand_http_request_duration_seconds_bucket[5m]))) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: AI统一需求平台P95响应时间超过2秒
+          runbook: docs/monitoring-and-alerting.md#高延迟
+
+  - name: ai-demand-platform.business-continuity
+    rules:
+      - alert: AIDemandPlatformDeadIntegrationTask
+        expr: max(ai_demand_integration_tasks{status="DEAD"}) > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 存在下游集成死信任务
+          runbook: docs/monitoring-and-alerting.md#集成死信
+
+      - alert: AIDemandPlatformIntegrationBacklogStale
+        expr: max(ai_demand_oldest_pending_integration_age_seconds) > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: 最老未完成集成任务超过5分钟
+          runbook: docs/monitoring-and-alerting.md#集成积压
+
+      - alert: AIDemandPlatformAuditChainInvalidAtStartup
+        expr: min(ai_demand_audit_chain_startup_valid) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 至少一个实例启动时审计链校验未通过
+          runbook: docs/monitoring-and-alerting.md#审计链异常
+
+      - alert: AIDemandPlatformRateLimitRejectionsHigh
+        expr: sum(rate(ai_demand_rate_limit_rejections_total[5m])) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: 平台限流拒绝持续偏高
+          runbook: docs/monitoring-and-alerting.md#限流拒绝升高
+
+      - alert: AIDemandPlatformIdentityEventFailures
+        expr: sum(rate(ai_demand_http_requests_total{route="api_v1_webhooks_identity_events",status_class=~"4xx|5xx"}[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: 身份生命周期事件持续失败
+          runbook: docs/monitoring-and-alerting.md#身份事件失败
+
+      - alert: AIDemandPlatformNoActiveKnowledge
+        expr: max(ai_demand_knowledge_items{state="active"}) == 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: 当前没有可回答的有效知识
+          runbook: docs/monitoring-and-alerting.md#无有效知识
+
+      - alert: AIDemandPlatformOrganizationDirectoryUnavailable
+        expr: max(ai_demand_organization_directory_required_services) > 0 and max(ai_demand_organization_directory_available{state="fresh"}) < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: 部门子树授权依赖的组织目录缺失或过期
+          runbook: docs/monitoring-and-alerting.md#组织目录不可用
+
+      - alert: AIDemandPlatformOrganizationDirectoryExpiring
+        expr: max(ai_demand_organization_directory_required_services) > 0 and max(ai_demand_organization_directory_seconds_until_expiry) < 86400 and max(ai_demand_organization_directory_seconds_until_expiry) > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: 组织目录将在24小时内过期
+          runbook: docs/monitoring-and-alerting.md#组织目录即将过期

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "sourceSystem": "DINGTALK",
+  "generatedAt": "2026-08-17T00:00:00.000Z",
+  "expiresAt": "2026-09-16T00:00:00.000Z",
+  "departments": [
+    { "departmentId": "D-COMPANY", "name": "公司", "parentDepartmentId": null },
+    { "departmentId": "D-ORG", "name": "组织中心", "parentDepartmentId": "D-COMPANY" },
+    { "departmentId": "D-CRM", "name": "CRM运营组", "parentDepartmentId": "D-ORG" },
+    { "departmentId": "D-ERP", "name": "ERP支持组", "parentDepartmentId": "D-ORG" }
+  ]
+}

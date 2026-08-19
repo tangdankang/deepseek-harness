@@ -1,0 +1,11 @@
+{
+  "maxErrorRate": 0.001,
+  "maxP95Ms": 500,
+  "maxP99Ms": 1000,
+  "minThroughputRps": 50,
+  "maxEventLoopP99Ms": 100,
+  "maxHeapGrowthMb": 128,
+  "maxRssGrowthMb": 256,
+  "maxRateLimitedRate": 0.001,
+  "maxScheduleLagP95Ms": 100
+}

@@ -1,0 +1,46 @@
+name: ai-demand-platform-pilot
+
+x-runtime: &runtime
+  build:
+    context: ..
+    dockerfile: Containerfile
+    image: ai-demand-platform-mvp:1.17.0
+  restart: unless-stopped
+  env_file:
+    - .env.production
+  environment:
+    NODE_ENV: production
+    RUNTIME_PROFILE: PILOT_SINGLE_NODE_SQLITE
+    DATABASE_PATH: /data/demand-platform.db
+  volumes:
+    - demand-data:/data
+    - ./connectors.production.json:/run/config/connectors.json:ro
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  stop_grace_period: 20s
+
+services:
+  api:
+    <<: *runtime
+    ports:
+      - "127.0.0.1:8787:8787"
+    healthcheck:
+      test: ["CMD", "node", "scripts/healthcheck.mjs"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  worker:
+    <<: *runtime
+    command: ["node", "scripts/run-integration-worker.mjs", "--database", "/data/demand-platform.db", "--limit", "20", "--watch", "--interval-ms", "5000"]
+    healthcheck:
+      disable: true
+
+volumes:
+  demand-data:

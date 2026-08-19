@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "packageId": "P0-CRM-YYYYMMDD",
+  "packageType": "BUSINESS_SYSTEM",
+  "systemCode": "CRM",
+  "contacts": {
+    "businessOwner": "待提供",
+    "technicalOwner": "待提供",
+    "securityOwner": "待提供",
+    "operationsOwner": "待提供"
+  },
+  "network": {
+    "testBaseUrlOrAlias": "待提供",
+    "accessMethod": "待提供",
+    "allowlistOwner": "待提供"
+  },
+  "evidence": [
+    {
+      "category": "CREATE_API",
+      "path": "接口文档/CRM建单接口.docx",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "QUERY_OR_WEBHOOK",
+      "path": "接口文档/CRM查单与回调.docx",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "AUTH_SPEC",
+      "path": "接口文档/CRM鉴权规范-无真实凭据.docx",
+      "classification": "CONFIDENTIAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "FIELD_MAPPING",
+      "path": "字段与状态/字段映射.xlsx",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "STATUS_MAPPING",
+      "path": "字段与状态/状态映射.xlsx",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "IDEMPOTENCY",
+      "path": "接口文档/幂等规则.md",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "ERROR_CODES",
+      "path": "接口文档/错误码与限流.md",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "TEST_DATA",
+      "path": "脱敏样本/工单样本.xlsx",
+      "classification": "CONFIDENTIAL",
+      "containsCredential": false,
+      "sha256": ""
+    },
+    {
+      "category": "SECURITY_CLASSIFICATION",
+      "path": "安全/数据分级与脱敏说明.md",
+      "classification": "INTERNAL",
+      "containsCredential": false,
+      "sha256": ""
+    }
+  ]
+}

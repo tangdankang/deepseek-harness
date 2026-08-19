@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "knowledge": [
+    {
+      "knowledgeId": "KB-ACCESS-001",
+      "version": 1,
+      "title": "业务系统账号权限办理说明",
+      "patterns": ["怎么申请系统权限", "账号登录失败", "系统权限不正确"],
+      "answer": "请先确认具体系统和问题类型。登录故障需提供报错时间与脱敏截图；新增或变更权限仍须进入公司原审批流程，平台不会直接授予权限。",
+      "ownerTeam": "权限服务组",
+      "changeRef": "KB-CHANGE-20260817-001",
+      "source": {
+        "title": "账号权限办理规范",
+        "url": "https://intranet.example.invalid/access-guide",
+        "contentSha256": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "reviewedAt": "2026-08-17T00:00:00.000Z"
+      },
+      "allowedDepartments": ["*"],
+      "enabled": true,
+      "expiresAt": "2027-02-17T00:00:00.000Z"
+    }
+  ]
+}

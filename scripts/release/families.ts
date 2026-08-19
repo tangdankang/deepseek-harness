@@ -12,6 +12,7 @@
 import { globSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { validateTarballPayload } from '../publication-payload.ts'
+import { isPrivateWorkspaceApplication } from '../workspace-manifest-policy.ts'
 
 /**
  * Dependency sections a consumer must publish after, because npm resolves them
@@ -125,6 +126,8 @@ export abstract class ReleaseFamily {
     for (const manifestPath of manifestPaths) {
       const normalized = manifestPath.replaceAll('\\', '/')
       const manifest = readManifest(resolve(root, manifestPath))
+      const directory = normalized.slice(0, normalized.length - '/package.json'.length)
+      if (isPrivateWorkspaceApplication(directory, manifest)) continue
       const name = requireString(manifest, 'name', normalized)
       const version = requireString(manifest, 'version', normalized)
       if (name === WORKSPACE_ROOT_PACKAGE) throw new Error(`${normalized} selected the workspace root`)
@@ -132,7 +135,7 @@ export abstract class ReleaseFamily {
       if (seen.has(name)) throw new Error(`${name} appears twice in release family ${this.id}`)
       seen.add(name)
       members.push({
-        directory: normalized.slice(0, normalized.length - '/package.json'.length),
+        directory,
         name,
         version,
         manifest,
