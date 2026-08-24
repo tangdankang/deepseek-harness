@@ -740,6 +740,19 @@
         "@deepseek-ai/.+"
       ]
     },
+    "apps/vscode": {
+      "entry": [
+        "tests/**/*.spec.ts",
+        "tests/**/*.e2e.spec.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "tests/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "vscode"
+      ]
+    },
     "packages/client/modules": {
       "entry": [
         "tests/**/*.spec.ts"
@@ -779,6 +792,11 @@
       ]
     },
     "packages/bundle/web-app": {
+      "ignoreDependencies": [
+        "@deepseek-ai/.+"
+      ]
+    },
+    "packages/bundle/vscode-app": {
       "ignoreDependencies": [
         "@deepseek-ai/.+"
       ]

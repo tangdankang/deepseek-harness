@@ -1,0 +1,60 @@
+# The dsh-vscode-app bundle patch: a long-lived Host API process over dsh-base.
+# Stdout is reserved for newline JSON-RPC; this layer mounts no stdout logger,
+# HTTP server, browser runtime, or client plugin roster.
+
+# Module HMR is not part of the VS Code process lifecycle. The profile launcher
+# still mounts its config-only watcher for user patch files.
+- id: hmr
+  disabled: true
+
+# VS Code exposes only the three reviewed product modes. The composition
+# default is confirm-changes; each new session persists the selected preset
+# and its underlying sandbox and approval values.
+- id: permission
+  name: '@deepseek-ai/dsh-permission-presets'
+  config:
+    defaultPreset: confirm-changes
+    presets:
+      read-only:
+        sandbox: read-only
+        approval: never
+        name: Read-only
+        description: Read project files; reject every operation that requires elevated access.
+      confirm-changes:
+        sandbox: read-only
+        approval: ask
+        name: Confirm changes
+        description: Review and approve each file change or elevated command once before it runs.
+      workspace-write:
+        sandbox: workspace-write
+        approval: ask
+        name: Workspace writes
+        description: Allow writes inside the workspace; ask before access outside it.
+
+- insert:
+    - id: storage
+      name: '@deepseek-ai/dsh-storage'
+
+    - id: storage-json
+      name: '@deepseek-ai/dsh-storage-json'
+      config:
+        root: !!js dshHomePath('storages')
+
+    - id: storage-domain
+      name: '@deepseek-ai/dsh-storage-domain'
+      config:
+        backend: json
+
+    - id: workspace
+      name: '@deepseek-ai/dsh-workspace'
+
+    # VS Code owns native folder selection. The Host API retains filesystem
+    # listing and directory creation for later workspace/session surfaces.
+    - id: directory-picker
+      name: '@deepseek-ai/dsh-host-directory-picker-browse'
+
+    - id: api-gateway
+      name: '@deepseek-ai/dsh-host-apiproxy'
+
+    - id: api-stdio
+      name: '@deepseek-ai/dsh-host-apiproxy-stdio'

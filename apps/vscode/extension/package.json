@@ -1,0 +1,120 @@
+{
+  "name": "dsh-vscode",
+  "displayName": "DeepSeek Harness",
+  "description": "Run DeepSeek Harness as a coding agent inside VS Code.",
+  "version": "0.1.0",
+  "publisher": "deepseek-ai",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Machine Learning",
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./dist/extension.cjs",
+  "activationEvents": [
+    "onView:dsh.chat",
+    "onCommand:dsh.start",
+    "onCommand:dsh.configureModel",
+    "onCommand:dsh.selectDefaultPermission"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "dsh.start",
+        "title": "DSH: Start Runtime"
+      },
+      {
+        "command": "dsh.stop",
+        "title": "DSH: Stop Runtime"
+      },
+      {
+        "command": "dsh.restart",
+        "title": "DSH: Restart Runtime"
+      },
+      {
+        "command": "dsh.showOutput",
+        "title": "DSH: Show Runtime Output"
+      },
+      {
+        "command": "dsh.openSettings",
+        "title": "DSH: Open Runtime Settings"
+      },
+      {
+        "command": "dsh.configureModel",
+        "title": "DSH: Configure OpenAI-compatible Model"
+      },
+      {
+        "command": "dsh.selectDefaultPermission",
+        "title": "DSH: Select Default Permission"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "dsh",
+          "title": "DeepSeek Harness",
+          "icon": "media/dsh.svg"
+        }
+      ]
+    },
+    "views": {
+      "dsh": [
+        {
+          "id": "dsh.chat",
+          "name": "Coding Agent",
+          "type": "webview"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "DeepSeek Harness",
+      "properties": {
+        "dsh.runtime.command": {
+          "type": "string",
+          "default": "dsh",
+          "description": "Executable used to start DeepSeek Harness in the current Extension Host environment."
+        },
+        "dsh.runtime.args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "--profile",
+            "vscode"
+          ],
+          "description": "Arguments passed to the DeepSeek Harness executable."
+        },
+        "dsh.runtime.cwd": {
+          "type": "string",
+          "default": "",
+          "description": "Runtime working directory. An empty value uses the first workspace folder or the Extension Host working directory."
+        },
+        "dsh.runtime.startOnOpen": {
+          "type": "boolean",
+          "default": false,
+          "description": "Start the DeepSeek Harness runtime when the extension activates."
+        },
+        "dsh.runtime.handshakeTimeoutMs": {
+          "type": "number",
+          "default": 15000,
+          "minimum": 1000,
+          "maximum": 120000,
+          "description": "Maximum time to wait for each runtime readiness request during startup."
+        },
+        "dsh.runtime.stopTimeoutMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "maximum": 60000,
+          "description": "Maximum time to wait for graceful runtime shutdown before terminating the child process."
+        }
+      }
+    }
+  }
+}

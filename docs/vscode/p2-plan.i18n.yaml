@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/vscode/p2-plan.md
+p2-plan.md: 8ea4d19d6c698bc9f8288717b4d9dfc7c6437e44
+p2-plan.zh.md: 2090eae3db8286fb86cdeb076881949ea0aeb986

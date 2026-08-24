@@ -25,6 +25,7 @@ import {
 export type * from './api/index.ts'
 export { RpcId } from './api/rpc.ts'
 export { toFetchHandler } from './fetch/handler.ts'
+export { dispatchClientRequest, INVALID_REQUEST_RPC_ID, rpcMethodFor, serverErrorResponse } from './dispatch.ts'
 export { AbstractApiClient, InProcessApiClient } from './fetch/client.ts'
 export type { IApiClient } from './fetch/client.ts'
 export { createApiProxy } from './api-proxy.ts'
