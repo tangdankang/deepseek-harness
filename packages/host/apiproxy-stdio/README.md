@@ -6,9 +6,9 @@ The newline-delimited JSON-RPC carrier for the transport-independent [`ctx.apiPr
 
 ## Protocol
 
-Clients must call `dsh/initialize` once before any other request. `dsh/request` carries a full-form Host API `ClientRequest`, `dsh/respond` answers a Host-initiated interaction, and `dsh/subscribe` opens either the `mux` or `host` event stream. Stream frames arrive as `dsh/event` notifications with a carrier-minted subscription id and the original answerable server `rpcId`. `dsh/unsubscribe` cancels and settles one stream. The protocol vocabulary is exported from `@deepseek-ai/dsh-host-apiproxy-stdio/protocol` without importing Node runtime modules.
+Clients must call `dsh/initialize` once before any other request. `dsh/request` carries a full-form Host API `ClientRequest`; an aborted client emits best-effort `dsh/cancel` with that request's Host `rpcId`. `dsh/respond` answers a Host-initiated interaction, and `dsh/subscribe` opens either the `mux` or `host` event stream. Stream frames arrive as `dsh/event` notifications with a carrier-minted subscription id and the original answerable server `rpcId`; exactly one `dsh/streamEnd` notification marks iterator settlement. `dsh/unsubscribe` cancels and awaits one stream. The protocol vocabulary is exported from `@deepseek-ai/dsh-host-apiproxy-stdio/protocol` without importing Node runtime modules.
 
-`dsh/shutdown`, stdin closure, and stdin failure all cancel active streams and request launcher exit after pending protocol output flushes. Plugin disposal cancels and awaits the same stream tasks before closing the transport. Host API payloads pass the same compiler-locked dispatcher and domain schemas as the fetch carrier; implementation failures remain carrier failures rather than business-error responses.
+`dsh/shutdown`, stdin closure, and stdin failure cancel active streams and in-flight requests, await their settlement, flush pending protocol output, and request launcher exit. Plugin disposal reaches the same quiescent state before closing the transport. Host API payloads pass the same compiler-locked dispatcher and domain schemas as the fetch carrier; implementation failures remain carrier failures rather than business-error responses.
 
 ## Model Experience
 

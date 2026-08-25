@@ -10,63 +10,9 @@ import type { ApiProxy, HostFrame, MuxFrame } from '../api/index.ts'
 import type { RequestPayload, ResponseValue, RpcMethodMap } from '../api/rpc-map.ts'
 import type { ClientRequest, ClientResponse, RpcMessage, RpcReceipt, RpcRequest, RpcResponse, ServerRequest } from '../api/rpc.ts'
 import { RpcId } from '../api/rpc.ts'
-import type { Wire } from '../api/rpc.schema.ts'
 import { rpcReceiptSchema, serverRequestSchema, serverResponseSchema } from '../api/rpc.schema.ts'
 import { hostFrameSchema, muxFrameSchema } from '../api/events.schema.ts'
-import {
-  hostCreateDirectoryValueSchema, hostDescribeValueSchema,
-  hostListDirectoryValueSchema, hostOpenPathValueSchema, hostPickDirectoryValueSchema,
-} from '../api/host.schema.ts'
-import {
-  sessionCancelValueSchema,
-  sessionAttachmentValueSchema,
-  sessionCreateValueSchema,
-  sessionForkValueSchema,
-  sessionHistoryValueSchema,
-  sessionListValueSchema,
-  sessionModelsValueSchema,
-  sessionPromptValueSchema,
-  sessionRenameValueSchema,
-  sessionSearchValueSchema,
-  sessionSelectModelValueSchema,
-  sessionUpdateQueueValueSchema,
-} from '../api/sessions.schema.ts'
-import {
-  workspaceArchiveSessionValueSchema,
-  workspaceCreateValueSchema,
-  workspaceDeleteValueSchema,
-  workspaceInsertBeforeValueSchema,
-  workspaceInsertSessionBeforeValueSchema,
-  workspaceListValueSchema,
-  workspaceRenameValueSchema,
-} from '../api/workspace.schema.ts'
-import { skillListValueSchema } from '../api/skills.schema.ts'
-import {
-  agentPresetCopyValueSchema, agentPresetListValueSchema, agentPresetOpenDocumentValueSchema,
-  agentPresetReadValueSchema, agentPresetRemoveValueSchema, agentPresetSelectValueSchema,
-} from '../api/agent-presets.schema.ts'
-import {
-  goalCreateValueSchema,
-  goalEditValueSchema,
-  goalPauseValueSchema,
-  goalResumeValueSchema,
-  goalCompleteValueSchema,
-  goalClearValueSchema,
-} from '../api/goals.schema.ts'
-import {
-  settingsDescribeValueSchema, settingsMutateValueSchema, settingsOpenDocumentValueSchema,
-  settingsReplaceValueSchema, settingsUpdateValueSchema,
-} from '../api/settings.schema.ts'
-import {
-  credentialsDescribeValueSchema, credentialsSetValueSchema, credentialsUnsetValueSchema,
-} from '../api/credentials.schema.ts'
-import { llmDiscoverModelsValueSchema, llmModelsValueSchema, llmProvidersValueSchema } from '../api/llm.schema.ts'
-import {
-  subagentHistoryValueSchema,
-  subagentInterruptValueSchema,
-  subagentListValueSchema,
-  subagentPromptValueSchema,
-} from '../api/subagents.schema.ts'
+import { parseResponseValue } from '../api/response-values.ts'
 
 /**
  * Client consumption face of the contract (shape a): same domain tree as ApiProxy, but unary
@@ -169,61 +115,6 @@ export interface IApiClient {
  * S→C second-level parse table: value schema by method (the response-path
  * mirror of the handler's request table; key coverage compiler-enforced against RpcMethodMap).
  */
-const UNARY_VALUE_SCHEMAS: { [K in keyof RpcMethodMap]: z.ZodType<Wire<ResponseValue<K>>> } = {
-  'session.list': sessionListValueSchema,
-  'session.search': sessionSearchValueSchema,
-  'session.create': sessionCreateValueSchema,
-  'session.history': sessionHistoryValueSchema,
-  'session.models': sessionModelsValueSchema,
-  'session.selectModel': sessionSelectModelValueSchema,
-  'session.rename': sessionRenameValueSchema,
-  'session.fork': sessionForkValueSchema,
-  'session.prompt': sessionPromptValueSchema,
-  'session.attachment': sessionAttachmentValueSchema,
-  'session.updateQueue': sessionUpdateQueueValueSchema,
-  'session.cancel': sessionCancelValueSchema,
-  'subagent.list': subagentListValueSchema,
-  'subagent.history': subagentHistoryValueSchema,
-  'subagent.prompt': subagentPromptValueSchema,
-  'subagent.interrupt': subagentInterruptValueSchema,
-  'host.describe': hostDescribeValueSchema,
-  'host.pickDirectory': hostPickDirectoryValueSchema,
-  'host.listDirectory': hostListDirectoryValueSchema,
-  'host.createDirectory': hostCreateDirectoryValueSchema,
-  'host.openPath': hostOpenPathValueSchema,
-  'workspace.list': workspaceListValueSchema,
-  'workspace.create': workspaceCreateValueSchema,
-  'workspace.rename': workspaceRenameValueSchema,
-  'workspace.delete': workspaceDeleteValueSchema,
-  'workspace.insertBefore': workspaceInsertBeforeValueSchema,
-  'workspace.insertSessionBefore': workspaceInsertSessionBeforeValueSchema,
-  'workspace.archiveSession': workspaceArchiveSessionValueSchema,
-  'skill.list': skillListValueSchema,
-  'agentPreset.list': agentPresetListValueSchema,
-  'agentPreset.select': agentPresetSelectValueSchema,
-  'agentPreset.read': agentPresetReadValueSchema,
-  'agentPreset.copy': agentPresetCopyValueSchema,
-  'agentPreset.openDocument': agentPresetOpenDocumentValueSchema,
-  'agentPreset.remove': agentPresetRemoveValueSchema,
-  'goal.create': goalCreateValueSchema,
-  'goal.edit': goalEditValueSchema,
-  'goal.pause': goalPauseValueSchema,
-  'goal.resume': goalResumeValueSchema,
-  'goal.complete': goalCompleteValueSchema,
-  'goal.clear': goalClearValueSchema,
-  'settings.describe': settingsDescribeValueSchema,
-  'settings.openDocument': settingsOpenDocumentValueSchema,
-  'settings.update': settingsUpdateValueSchema,
-  'settings.replace': settingsReplaceValueSchema,
-  'settings.mutate': settingsMutateValueSchema,
-  'credentials.describe': credentialsDescribeValueSchema,
-  'credentials.set': credentialsSetValueSchema,
-  'credentials.unset': credentialsUnsetValueSchema,
-  'llm.providers': llmProvidersValueSchema,
-  'llm.models': llmModelsValueSchema,
-  'llm.discoverModels': llmDiscoverModelsValueSchema,
-}
-
 /** Default timeout for bounded unary calls (rpc-compare 2026-07-19: a hung host must not leave callers pending forever). */
 const DEFAULT_TIMEOUT_MS = 30_000
 
@@ -345,7 +236,7 @@ export abstract class AbstractApiClient implements IApiClient {
     if (!full.result.ok) return { rpcId: full.rpcId, result: full.result }
     // Second-level S→C parse: the ok value must match the method's Value schema (mirror of the
     // handler's request-payload parse). The cast collapses the Wire<> widening, same as the handler side.
-    const value = UNARY_VALUE_SCHEMAS[method].parse(full.result.value) as ResponseValue<K>
+    const value = parseResponseValue(method, full.result.value)
     return { rpcId: full.rpcId, result: { ok: true, value } }
   }
 

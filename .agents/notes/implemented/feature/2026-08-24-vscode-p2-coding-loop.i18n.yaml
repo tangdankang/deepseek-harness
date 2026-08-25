@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-24-vscode-p2-coding-loop.md
+2026-08-24-vscode-p2-coding-loop.md: 879811ea6ae63f3bbe18058f1b01fe264eb42652
+2026-08-24-vscode-p2-coding-loop.zh.md: d29c894b9e8ef1db35042fe983074a144c2cd049

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md
-2026-08-24-vscode-host-stdio-runtime.md: ec53fe499687ce3aea6c9436ad53383ce071542e
-2026-08-24-vscode-host-stdio-runtime.zh.md: 9eb426b3314d3597db7fdf6f154ab2dcc8b22588
+2026-08-24-vscode-host-stdio-runtime.md: a0d4082c91590e7ef67e340220a77d9228afb39c
+2026-08-24-vscode-host-stdio-runtime.zh.md: 67eecea0524a8e83effd6d01c2e9b7d664feb46b

@@ -1,15 +1,23 @@
 /** Owned DSH child-process lifecycle and P1 connection state. */
 
 import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import type {
+  ApprovalResponsePayload, HostFrame, MuxFrame, RpcId, RpcReceipt, RpcRequest,
+} from '@deepseek-ai/dsh-host-apiproxy/api'
+import type { RequestPayload, ResponseValue, RpcMethodMap } from '@deepseek-ai/dsh-host-apiproxy/api/rpc-map'
 import crossSpawn from 'cross-spawn'
 import {
   HostProtocolClient,
+  type HostSubscription,
   type HostDescription,
   type SettingsDescription,
   type SettingsMutation,
 } from './host-client.ts'
 import type { SettingsNamespaceView } from '@deepseek-ai/dsh-host-apiproxy/api/settings'
 import { redactDiagnostic } from './environment.ts'
+import { HostEventFold } from './event-fold.ts'
+
+type SessionId = Extract<MuxFrame, { type: 'session/event' }>['sessionId']
 
 /** Configuration resolved for one runtime launch. */
 export interface RuntimeLaunchConfig {
@@ -54,11 +62,25 @@ interface ExitResult {
 }
 
 /**
+ * Resolve the project directory used by the coding runtime.
+ * @param configuredCwd - explicit advanced-setting value, if any.
+ * @param workspaceCwd - first open VS Code workspace folder, if any.
+ * @returns the explicit directory or open workspace folder.
+ */
+export function resolveRuntimeCwd(configuredCwd: string, workspaceCwd: string | undefined): string {
+  if (configuredCwd !== '') return configuredCwd
+  if (workspaceCwd !== undefined) return workspaceCwd
+  throw new Error('尚未打开工作区文件夹。请先选择“文件 → 打开文件夹”，打开要让 DSH 处理的项目，再点击“启动”；也可以在 DSH 高级设置中填写运行时工作目录。')
+}
+
+/**
  * Own one DSH process at a time. State changes are synchronous; each async
  * lifecycle method settles only after its owned transition reaches a terminal
  * state.
  */
 export class RuntimeManager {
+  /** Reconciled Host events retained across owned process generations. */
+  readonly events = new HostEventFold()
   private currentState: RuntimeState = { kind: 'stopped' }
   private readonly listeners = new Set<(state: RuntimeState) => void>()
   private child: ChildProcessWithoutNullStreams | undefined
@@ -153,6 +175,36 @@ export class RuntimeManager {
     return this.connectedClient().mutateSettings(mutation, signal)
   }
 
+  /** Dispatch one validated Host API call through the connected process. */
+  request<K extends keyof RpcMethodMap>(
+    method: K,
+    payload: RequestPayload<K>,
+    signal: AbortSignal = AbortSignal.timeout(30_000),
+  ): Promise<ResponseValue<K>> {
+    return this.connectedClient().request(method, payload, signal)
+  }
+
+  /**
+   * Track and reconcile one session tail against current mux delivery.
+   * @param sessionId - durable session selected by later presentation work.
+   * @param signal - history request deadline or cancellation.
+   */
+  async reconcileSession(
+    sessionId: SessionId,
+    signal: AbortSignal = AbortSignal.timeout(30_000),
+  ): Promise<void> {
+    await this.reconcileWithClient(this.connectedClient(), sessionId, signal)
+  }
+
+  /** Answer one pending approval interaction by its server-request id. */
+  respondApproval(
+    requestId: RpcId,
+    payload: ApprovalResponsePayload,
+    signal: AbortSignal = AbortSignal.timeout(30_000),
+  ): Promise<RpcReceipt> {
+    return this.connectedClient().respondApproval(requestId, payload, signal)
+  }
+
   /** Refresh configuration facts displayed beside the connected runtime. */
   async refreshConfiguration(signal: AbortSignal = AbortSignal.timeout(15_000)): Promise<void> {
     if (this.currentState.kind !== 'connected') {
@@ -199,6 +251,8 @@ export class RuntimeManager {
     this.client = client
     client.start()
     void this.observeExit(child, this.exitResult, generation)
+    let failStream: (error: Error) => void = () => {}
+    const streamFailure = new Promise<never>((_resolve, reject) => { failStream = reject })
 
     try {
       await readinessRequest(
@@ -207,18 +261,39 @@ export class RuntimeManager {
         signal => client.initialize(this.extensionVersion, signal),
         processFailure,
       )
+      this.events.beginConnection()
+      const mux = await readinessRequest(
+        'mux subscription',
+        config.handshakeTimeoutMs,
+        signal => client.subscribeMux({}, signal),
+        processFailure,
+      )
+      const hostEvents = await readinessRequest(
+        'host subscription',
+        config.handshakeTimeoutMs,
+        signal => client.subscribeHost(signal),
+        processFailure,
+      )
+      void this.pumpStream(mux, (envelope) => { this.events.acceptMux(envelope) }, failStream)
+      void this.pumpStream(hostEvents, (envelope) => { this.events.acceptHost(envelope) }, failStream)
+      void streamFailure.catch((error: unknown) => {
+        void this.handleStreamFailure(child, generation, error)
+      })
       const host = await readinessRequest(
         'Host description',
         config.handshakeTimeoutMs,
         signal => client.describe(signal),
-        processFailure,
+        Promise.race([processFailure, streamFailure]),
       )
       const settings = await readinessRequest(
         'settings description',
         config.handshakeTimeoutMs,
         signal => client.describeSettings(signal),
-        processFailure,
+        Promise.race([processFailure, streamFailure]),
       )
+      for (const sessionId of this.events.trackedSessionIds) {
+        await this.reconcileWithClient(client, sessionId, AbortSignal.timeout(config.handshakeTimeoutMs))
+      }
       if (generation !== this.generation || this.child !== child) throw new Error('DSH start was cancelled')
       this.logger.appendLine(`[runtime] connected to DSH ${host.version}`)
       this.setState({ kind: 'connected', host, defaultPermission: defaultPermissionOf(settings) })
@@ -236,7 +311,7 @@ export class RuntimeManager {
   /** Return the owned client only after the runtime completed its handshake. */
   private connectedClient(): HostProtocolClient {
     if (this.currentState.kind !== 'connected' || this.client === undefined) {
-      throw new Error('DSH runtime must be connected before changing its configuration')
+      throw new Error('DSH runtime must be connected before using the Host API')
     }
     return this.client
   }
@@ -283,6 +358,54 @@ export class RuntimeManager {
     const message = `DSH exited unexpectedly with ${describeExit(exit)}${detail === '' ? '' : ` — ${detail}`}`
     this.logger.appendLine(`[runtime] ${message}`)
     this.setState({ kind: 'error', message })
+  }
+
+  private async pumpStream<F extends MuxFrame | HostFrame>(
+    subscription: HostSubscription<F>,
+    accept: (envelope: RpcRequest<F>) => void,
+    fail: (error: Error) => void,
+  ): Promise<void> {
+    try {
+      for await (const envelope of subscription) {
+        if (envelope.payload.type === 'stream/error') {
+          throw new Error(envelope.payload.error.message)
+        }
+        accept(envelope)
+      }
+      fail(new Error(`${subscription.id} ended`))
+    } catch (error: unknown) {
+      fail(error instanceof Error ? error : new Error(String(error)))
+    }
+  }
+
+  private async handleStreamFailure(
+    child: ChildProcessWithoutNullStreams,
+    generation: number,
+    error: unknown,
+  ): Promise<void> {
+    if (error instanceof Error && error.message === 'DSH Host input closed' && this.exitResult !== undefined) {
+      const exited = await settleBefore(this.exitResult, 100)
+      if (exited) return
+    }
+    if (this.child !== child || generation !== this.generation || this.currentState.kind !== 'connected') return
+    const message = `DSH event stream ended unexpectedly: ${errorMessage(error)}`
+    this.logger.appendLine(`[runtime] ${message}`)
+    this.setState({ kind: 'error', message })
+    this.client?.close()
+    child.kill()
+  }
+
+  private async reconcileWithClient(
+    client: HostProtocolClient,
+    sessionId: SessionId,
+    signal: AbortSignal,
+  ): Promise<void> {
+    this.events.beginHistory(sessionId)
+    while (true) {
+      const history = await client.request('session.history', { sessionId }, signal)
+      this.events.seedProjections(sessionId, history.projections)
+      if (!this.events.installHistory(sessionId, history.events)) return
+    }
   }
 
   private async terminate(child: ChildProcessWithoutNullStreams): Promise<void> {

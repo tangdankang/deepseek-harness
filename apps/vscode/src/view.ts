@@ -1,132 +1,363 @@
-/** Minimal P1 sidebar for runtime connection control and status. */
+/** Native VS Code Webview for the P2 coding-agent conversation. */
 
+import { randomBytes } from 'node:crypto'
 import type * as vscode from 'vscode'
-import type { RuntimeState } from './runtime-manager.ts'
+import type { ConversationViewModel } from './conversation.ts'
 
-/** Commands emitted by the sidebar webview. */
-type ViewCommand = 'start' | 'stop' | 'restart' | 'showOutput' | 'openSettings'
-  | 'configureModel' | 'defaultPermission'
+/** Validated actions emitted by the conversation Webview. */
+export type ViewAction =
+  | { type: 'command'; command: ViewCommand }
+  | { type: 'newSession' }
+  | { type: 'selectSession'; sessionId: string }
+  | { type: 'loadOlder' }
+  | { type: 'prompt'; text: string }
+  | { type: 'cancel' }
+  | { type: 'selectPermission'; value: 'read-only' | 'confirm-changes' | 'workspace-write' }
+  | { type: 'selectModel'; value: string }
+  | { type: 'removeContext'; id: string }
+  | { type: 'openDiff'; id: string }
+  | { type: 'allowApproval'; id: string }
+  | { type: 'rejectApproval'; id: string }
 
-/**
- * Webview provider for the DSH activity-bar view. P1 renders runtime state and
- * lifecycle controls only; conversation content arrives in P2.
- */
+type RuntimeCommand =
+  | 'start'
+  | 'stop'
+  | 'restart'
+  | 'showOutput'
+  | 'openSettings'
+  | 'configureModel'
+  | 'selectDefaultPermission'
+type ContextCommand = 'addSelection' | 'addCurrentFile' | 'addWorkspace'
+type SkillCommand = 'createProjectSkill' | 'createUserSkill' | 'openSkills'
+/** Fixed command allowlist emitted by buttons without extra payload. */
+export type ViewCommand = RuntimeCommand | ContextCommand | SkillCommand
+
+/** Webview provider whose Extension Host dispatcher owns every privileged action. */
 export class DshViewProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined
 
   /**
-   * @param command - trusted command dispatcher.
-   * @param state - initial runtime state.
+   * @param action - trusted validated action dispatcher.
+   * @param model - initial complete view model.
    */
   constructor(
-    private readonly command: (command: ViewCommand) => void,
-    private state: RuntimeState,
+    private readonly action: (action: ViewAction) => void,
+    private model: ConversationViewModel,
   ) {}
 
-  /** Update the rendered runtime state. */
-  setState(state: RuntimeState): void {
-    this.state = state
-    void this.view?.webview.postMessage({ type: 'state', state })
+  /** Replace the complete serializable view model. */
+  setModel(model: ConversationViewModel): void {
+    this.model = model
+    void this.view?.webview.postMessage({ type: 'model', model })
   }
 
-  /** Configure one newly resolved VS Code webview. */
+  /** Clear the composer only after the Host accepted its prompt. */
+  clearPrompt(): void {
+    void this.view?.webview.postMessage({ type: 'clearPrompt' })
+  }
+
+  /** Configure one newly resolved VS Code Webview. */
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view
     view.webview.options = { enableScripts: true }
     view.webview.html = this.html(view.webview)
     view.webview.onDidReceiveMessage((message: unknown) => {
-      if (!isRecord(message) || message.type !== 'command' || !isViewCommand(message.command)) return
-      this.command(message.command)
+      const action = parseViewAction(message)
+      if (action !== undefined) this.action(action)
+    })
+    view.onDidDispose(() => {
+      if (this.view === view) this.view = undefined
     })
   }
 
   private html(webview: vscode.Webview): string {
     const nonce = nonceValue()
-    const initial = JSON.stringify(this.state).replaceAll('<', '\\u003c')
+    const initial = JSON.stringify(this.model).replaceAll('<', '\\u003c')
     return `<!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';">
   <style>
-    body { padding: 16px; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); font-family: var(--vscode-font-family); }
-    .status { display: flex; align-items: center; gap: 8px; margin: 8px 0 14px; }
-    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--vscode-descriptionForeground); }
-    .connected .dot { background: var(--vscode-testing-iconPassed); }
-    .error .dot { background: var(--vscode-testing-iconFailed); }
-    .detail { color: var(--vscode-descriptionForeground); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
-    button { color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 0; padding: 7px 10px; cursor: pointer; }
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body { margin: 0; overflow: hidden; color: var(--vscode-foreground); background: var(--vscode-sideBar-background); font-family: var(--vscode-font-family); font-size: var(--vscode-font-size); }
+    button, select, textarea { font: inherit; }
+    button { color: var(--vscode-button-foreground); background: var(--vscode-button-background); border: 1px solid transparent; border-radius: 3px; padding: 5px 9px; cursor: pointer; }
     button:hover { background: var(--vscode-button-hoverBackground); }
     button.secondary { color: var(--vscode-button-secondaryForeground); background: var(--vscode-button-secondaryBackground); }
-    button:disabled { opacity: .55; cursor: default; }
-    h2 { font-size: 14px; font-weight: 600; margin: 0; }
+    button.prominent { min-height: 32px; padding-inline: 14px; font-weight: 700; }
+    button.icon { min-width: 30px; padding-inline: 7px; }
+    button:disabled { opacity: .5; cursor: default; }
+    select, textarea { color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, transparent); }
+    select:focus, textarea:focus, button:focus { outline: 1px solid var(--vscode-focusBorder); outline-offset: 1px; }
+    .page { display: none; height: 100%; }
+    .page.active { display: flex; flex-direction: column; }
+    .top { flex: 0 0 auto; padding: 10px 12px 9px; background: var(--vscode-sideBar-background); border-bottom: 1px solid var(--vscode-sideBar-border, var(--vscode-widget-border)); }
+    .brand, .row, .status, .session-bar { display: flex; align-items: center; gap: 7px; }
+    .brand { justify-content: space-between; }
+    .brand-actions { display: flex; gap: 5px; }
+    h1, h2 { margin: 0; }
+    h1 { font-size: 13px; }
+    h2 { font-size: 12px; }
+    .status { color: var(--vscode-descriptionForeground); font-size: 11px; margin-top: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-descriptionForeground); }
+    .connected .dot { background: var(--vscode-testing-iconPassed); }
+    .error .dot { background: var(--vscode-testing-iconFailed); }
+    .session-bar { margin-top: 9px; }
+    .session-bar select { min-width: 0; flex: 1; padding: 5px; }
+    .scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    .conversation { padding: 8px 10px; }
+    .load { display: block; margin: 2px auto 10px; }
+    .empty { color: var(--vscode-descriptionForeground); text-align: center; padding: 28px 8px; }
+    .message { margin: 8px 0; padding: 8px 9px; border-radius: 5px; overflow-wrap: anywhere; }
+    .message.user { margin-left: 16px; background: var(--vscode-textBlockQuote-background); }
+    .message.assistant { margin-right: 8px; }
+    .message p { margin: 0 0 7px; }
+    .message p:last-child { margin-bottom: 0; }
+    .message pre { overflow: auto; padding: 7px; background: var(--vscode-textCodeBlock-background); }
+    .message code { font-family: var(--vscode-editor-font-family); }
+    .reasoning { color: var(--vscode-descriptionForeground); font-size: 11px; margin-bottom: 5px; }
+    .tool, .approval { margin: 7px 0; border: 1px solid var(--vscode-widget-border); border-radius: 4px; overflow: hidden; }
+    .tool-head, .approval-head { display: flex; justify-content: space-between; gap: 8px; padding: 7px 8px; background: var(--vscode-editorWidget-background); }
+    .tool-detail, .approval-detail { white-space: pre-wrap; overflow-wrap: anywhere; padding: 7px 8px; color: var(--vscode-descriptionForeground); font-family: var(--vscode-editor-font-family); font-size: 11px; max-height: 230px; overflow: auto; }
+    .pill { white-space: nowrap; color: var(--vscode-descriptionForeground); font-size: 10px; }
+    .failed, .notice.error { color: var(--vscode-errorForeground); }
+    .notice { padding: 5px 8px; color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .approvals { padding: 0 10px 10px; }
+    .approvals:not(:empty) { margin: 8px 10px 12px; padding: 9px; border: 2px solid var(--vscode-inputValidation-warningBorder); border-radius: 6px; background: var(--vscode-inputValidation-warningBackground); box-shadow: 0 2px 8px var(--vscode-widget-shadow); }
+    .approval-banner { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground)); }
+    .approval-mark { display: inline-grid; place-items: center; flex: 0 0 20px; height: 20px; border-radius: 50%; color: var(--vscode-editor-background); background: var(--vscode-editorWarning-foreground); font-weight: 700; }
+    .approval-summary { display: grid; gap: 1px; }
+    .approval-summary span { color: var(--vscode-descriptionForeground); font-size: 11px; }
+    .approval { margin: 0; border-color: var(--vscode-inputValidation-warningBorder); background: var(--vscode-sideBar-background); }
+    .approval + .approval { margin-top: 8px; }
+    .approval-actions { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--vscode-widget-border); }
+    .approval-actions button { min-height: 31px; flex: 1; font-weight: 700; }
+    .warning { padding: 0 8px 7px; color: var(--vscode-editorWarning-foreground); font-size: 11px; }
+    .composer { flex: 0 0 auto; padding: 7px 10px 10px; background: var(--vscode-sideBar-background); border-top: 1px solid var(--vscode-widget-border); }
+    .chips { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 5px; max-height: 50px; overflow: auto; }
+    .chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; color: var(--vscode-badge-foreground); background: var(--vscode-badge-background); border-radius: 10px; padding: 2px 6px; font-size: 10px; }
+    .chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip button { padding: 0; color: inherit; background: transparent; }
+    .context-actions { display: flex; gap: 4px; margin-bottom: 5px; flex-wrap: wrap; }
+    .context-actions button { padding: 2px 5px; font-size: 10px; }
+    textarea { width: 100%; resize: vertical; min-height: 54px; max-height: 170px; padding: 7px; }
+    .send-row { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 5px; }
+    .hint, .queue { margin-right: auto; color: var(--vscode-descriptionForeground); font-size: 10px; }
+    .skill-menu { display: none; max-height: 110px; overflow: auto; border: 1px solid var(--vscode-widget-border); background: var(--vscode-editorWidget-background); }
+    .skill-menu button { display: block; width: 100%; text-align: left; color: var(--vscode-foreground); background: transparent; }
+    .settings-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--vscode-widget-border); }
+    .settings-content { padding: 12px; }
+    .settings-card { display: grid; gap: 8px; margin-bottom: 12px; padding: 11px; border: 1px solid var(--vscode-widget-border); border-radius: 5px; background: var(--vscode-editorWidget-background); }
+    .settings-card p { margin: 0; color: var(--vscode-descriptionForeground); font-size: 11px; line-height: 1.45; }
+    .settings-card select { width: 100%; padding: 5px; }
+    .settings-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .settings-actions button { flex: 1; min-width: 72px; }
+    .settings-done { width: 100%; min-height: 34px; font-weight: 700; }
   </style>
 </head>
 <body>
-  <h2>DeepSeek Harness</h2>
-  <div id="status"></div>
-  <div class="actions">
-    <button id="start">Start</button>
-    <button id="stop" class="secondary">Stop</button>
-    <button id="restart" class="secondary">Restart</button>
-    <button id="output" class="secondary">Output</button>
-  </div>
-  <p><button id="settings" class="secondary">Runtime Settings</button></p>
-  <p><button id="model">Configure Model</button></p>
-  <p><button id="permission" class="secondary">Default Permission</button></p>
+  <section id="chat-page" class="page active">
+    <header class="top">
+      <div class="brand">
+        <h1>DSH 编码助手</h1>
+        <div class="brand-actions"><button id="quick-start">启动</button><button id="open-settings" class="secondary icon" title="打开 DSH 设置" aria-label="打开 DSH 设置">⚙</button></div>
+      </div>
+      <div id="chat-status"></div>
+      <div class="session-bar"><select id="sessions" aria-label="当前对话"></select><button id="new-session" class="prominent">＋ 新建对话</button></div>
+    </header>
+    <div id="conversation-scroll" class="scroll">
+      <main id="conversation" class="conversation" aria-live="polite"></main>
+      <div id="approvals" class="approvals" role="region" aria-label="待处理审批" aria-live="assertive" aria-atomic="true"></div>
+    </div>
+    <div class="composer">
+      <div id="chips" class="chips"></div>
+      <div class="context-actions"><button data-command="addSelection" class="secondary">＋ 选区</button><button data-command="addCurrentFile" class="secondary">＋ 当前文件</button><button data-command="addWorkspace" class="secondary">＋ 工作区</button><button data-command="createProjectSkill" class="secondary">＋ Skill</button></div>
+      <div id="skillmenu" class="skill-menu" role="listbox" aria-label="Skill 可选项"></div>
+      <textarea id="prompt" aria-label="任务输入" placeholder="告诉 DSH 要检查或修改什么……"></textarea>
+      <div class="send-row"><span id="queue" class="queue"></span><span class="hint">Enter 发送 · Shift+Enter 换行</span><button id="cancel" class="secondary">取消</button><button id="send">发送</button></div>
+    </div>
+  </section>
+  <section id="settings-page" class="page">
+    <header class="settings-head"><button id="back-to-chat" class="secondary icon" aria-label="返回对话">←</button><h1>DSH 设置</h1></header>
+    <div class="scroll settings-content">
+      <section class="settings-card">
+        <h2>运行状态</h2>
+        <div id="settings-status"></div>
+        <div class="settings-actions"><button id="start">启动</button><button id="stop" class="secondary">停止</button><button id="restart" class="secondary">重新启动</button><button id="output" class="secondary">查看输出</button></div>
+      </section>
+      <section class="settings-card">
+        <h2>模型</h2>
+        <p>模型地址和 API 密钥保存后会继续使用，切换侧边栏或重新打开此视图不需要再次配置。</p>
+        <select id="models" aria-label="当前对话模型"></select>
+        <button id="model-config">配置并保存模型</button>
+      </section>
+      <section class="settings-card">
+        <h2>权限</h2>
+        <select id="permissions" aria-label="当前对话权限"></select>
+        <button id="default-permission" class="secondary">设置新对话默认权限</button>
+      </section>
+      <section class="settings-card">
+        <h2>高级设置</h2>
+        <p>运行命令、启动参数、工作目录和超时时间位于 VS Code 设置中。</p>
+        <button id="advanced-settings" class="secondary">打开高级设置</button>
+      </section>
+      <button id="settings-done" class="settings-done">完成并返回对话</button>
+    </div>
+  </section>
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
-    const send = command => vscode.postMessage({ type: 'command', command });
-    document.getElementById('start').onclick = () => send('start');
-    document.getElementById('stop').onclick = () => send('stop');
-    document.getElementById('restart').onclick = () => send('restart');
-    document.getElementById('output').onclick = () => send('showOutput');
-    document.getElementById('settings').onclick = () => send('openSettings');
-    document.getElementById('model').onclick = () => send('configureModel');
-    document.getElementById('permission').onclick = () => send('defaultPermission');
-    const render = state => {
-      const root = document.getElementById('status');
-      const label = { stopped: 'Stopped', starting: 'Starting…', connected: 'Connected', stopping: 'Stopping…', error: 'Connection failed' }[state.kind];
-      let detail = '';
-      if (state.kind === 'connected') {
-        const model = state.host.provider && state.host.model ? state.host.provider + '/' + state.host.model : 'Not configured';
-        detail = 'DSH ' + state.host.version + '<br>' + escapeHtml(state.host.cwd)
-          + '<br>Model: ' + escapeHtml(model)
-          + '<br>Default permission: ' + escapeHtml(state.defaultPermission);
-      }
-      if (state.kind === 'error') detail = escapeHtml(state.message);
-      root.innerHTML = '<div class="status ' + state.kind + '"><span class="dot"></span><strong>' + label + '</strong></div><div class="detail">' + detail + '</div>';
-      document.getElementById('start').disabled = state.kind === 'starting' || state.kind === 'connected' || state.kind === 'stopping';
-      document.getElementById('stop').disabled = state.kind === 'stopped' || state.kind === 'stopping';
-      document.getElementById('restart').disabled = state.kind === 'starting' || state.kind === 'stopping';
+    const saved = vscode.getState() || {};
+    let model = ${initial};
+    let page = saved.page === 'settings' ? 'settings' : 'chat';
+    let approvalKey = '';
+    const post = value => vscode.postMessage(value);
+    const el = id => document.getElementById(id);
+    const button = (label, action, secondary = false, disabled = false) => {
+      const value = document.createElement('button'); value.textContent = label; value.disabled = disabled;
+      if (secondary) value.className = 'secondary'; value.onclick = action; return value;
     };
-    const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' })[character]);
-    render(${initial});
-    window.addEventListener('message', event => { if (event.data?.type === 'state') render(event.data.state); });
+    const option = (value, label, selected = false) => { const item = document.createElement('option'); item.value = value; item.textContent = label; item.selected = selected; return item; };
+    const saveState = () => vscode.setState({ page, draft: el('prompt').value });
+    function showPage(next) { page = next; el('chat-page').classList.toggle('active', next === 'chat'); el('settings-page').classList.toggle('active', next === 'settings'); saveState(); }
+    function statusNode(state) {
+      const labels = { stopped: '未启动', starting: '正在启动……', connected: '已连接', stopping: '正在停止……', error: '连接失败' };
+      const root = document.createElement('div'); root.className = 'status ' + state.kind;
+      const dot = document.createElement('span'); dot.className = 'dot'; root.append(dot, document.createTextNode(labels[state.kind]));
+      if (state.kind === 'error') root.title = state.message; return root;
+    }
+    function renderStatus() {
+      const state = model.runtime;
+      el('chat-status').replaceChildren(statusNode(state)); el('settings-status').replaceChildren(statusNode(state));
+      el('quick-start').style.display = state.kind === 'connected' ? 'none' : '';
+      el('quick-start').disabled = state.kind === 'starting' || state.kind === 'stopping';
+      el('start').disabled = state.kind === 'connected' || state.kind === 'starting' || state.kind === 'stopping';
+      el('stop').disabled = state.kind === 'stopped' || state.kind === 'stopping';
+      el('restart').disabled = state.kind === 'starting' || state.kind === 'stopping';
+    }
+    function renderSessionControl() {
+      const sessions = el('sessions'); sessions.replaceChildren();
+      sessions.append(option('', '选择一个对话', model.activeSessionId === undefined));
+      model.sessions.forEach(item => sessions.append(option(item.id, item.title + (item.running ? ' · 运行中' : ''), item.id === model.activeSessionId)));
+      sessions.onchange = () => { if (sessions.value) post({ type: 'selectSession', sessionId: sessions.value }); };
+    }
+    function renderSettings() {
+      const models = el('models'); models.replaceChildren(); models.disabled = !model.models.routable || model.models.options.length === 0;
+      if (model.models.options.length === 0) models.append(option('', model.models.routable ? '尚无可用模型' : '当前模型不可用'));
+      model.models.options.forEach(item => models.append(option(item.value, item.label, item.value === model.models.current)));
+      models.onchange = () => post({ type: 'selectModel', value: models.value });
+      const permissions = el('permissions'); permissions.replaceChildren(); permissions.disabled = !model.permission;
+      if (!model.permission) permissions.append(option('', '请先创建或选择对话'));
+      else model.permission.options.forEach(item => {
+        const labels = { 'read-only': '只读', 'confirm-changes': '修改前确认', 'workspace-write': '允许工作区修改' };
+        permissions.append(option(item.value, labels[item.value] || item.name, item.value === model.permission.current));
+      });
+      permissions.onchange = () => post({ type: 'selectPermission', value: permissions.value });
+    }
+    function renderConversation() {
+      const root = el('conversation'); root.replaceChildren();
+      if (model.hasMore) { const load = button('加载更早的对话', () => post({ type: 'loadOlder' }), true); load.className += ' load'; root.append(load); }
+      if (model.reconciling) { const note = document.createElement('div'); note.className = 'notice'; note.textContent = '正在同步对话记录……'; root.append(note); }
+      if (!model.activeSessionId) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = '点击上方“新建对话”开始。'; root.append(empty); return; }
+      const statusLabels = { running: '运行中', completed: '已完成', failed: '失败' };
+      model.transcript.forEach(item => {
+        if (item.kind === 'message') {
+          const node = document.createElement('article'); node.className = 'message ' + item.role;
+          if (item.reasoning) { const reasoning = document.createElement('div'); reasoning.className = 'reasoning'; reasoning.textContent = '正在思考……'; node.append(reasoning); }
+          const body = document.createElement('div'); if (item.role === 'assistant') body.innerHTML = item.html || ''; else body.textContent = item.text;
+          node.append(body); if (item.streaming) { const mark = document.createElement('span'); mark.className = 'pill'; mark.textContent = ' 输出中'; node.append(mark); } root.append(node);
+        } else if (item.kind === 'tool') {
+          const node = document.createElement('section'); node.className = 'tool ' + item.status;
+          const head = document.createElement('div'); head.className = 'tool-head'; const title = document.createElement('strong'); title.textContent = item.title;
+          const status = document.createElement('span'); status.className = 'pill ' + item.status; status.textContent = (statusLabels[item.status] || item.status) + (item.exit ? ' · ' + item.exit : ''); head.append(title, status); node.append(head);
+          if (item.detail) { const detail = document.createElement('div'); detail.className = 'tool-detail'; detail.textContent = item.detail; node.append(detail); } root.append(node);
+        } else { const node = document.createElement('div'); node.className = 'notice ' + item.tone; node.textContent = item.text; root.append(node); }
+      });
+    }
+    function renderApprovals() {
+      const root = el('approvals'); root.replaceChildren();
+      if (model.approvals.length) {
+        const banner = document.createElement('div'); banner.className = 'approval-banner';
+        const mark = document.createElement('span'); mark.className = 'approval-mark'; mark.textContent = '!';
+        const summary = document.createElement('div'); summary.className = 'approval-summary'; const title = document.createElement('strong'); title.textContent = '需要你的审批'; const hint = document.createElement('span'); hint.textContent = 'DSH 正在等待你的决定。'; summary.append(title, hint); banner.append(mark, summary); root.append(banner);
+      }
+      const kindLabels = { diff: '文件修改', shell: '终端命令', preparing: '正在准备审阅……', unsupported: '无法生成审阅' };
+      model.approvals.forEach(item => {
+        const node = document.createElement('section'); node.className = 'approval ' + item.kind;
+        const head = document.createElement('div'); head.className = 'approval-head'; const title = document.createElement('strong'); title.textContent = item.title; const kind = document.createElement('span'); kind.className = 'pill'; kind.textContent = kindLabels[item.kind] || item.kind; head.append(title, kind); node.append(head);
+        const detail = document.createElement('div'); detail.className = 'approval-detail'; detail.textContent = (item.reason ? item.reason + '\\n\\n' : '') + item.detail; node.append(detail);
+        if (item.warning) { const warning = document.createElement('div'); warning.className = 'warning'; warning.textContent = item.warning; node.append(warning); }
+        const actions = document.createElement('div'); actions.className = 'approval-actions';
+        if (item.previewId) actions.append(button('打开差异', () => post({ type: 'openDiff', id: item.previewId }), true));
+        actions.append(button('拒绝', () => post({ type: 'rejectApproval', id: item.approvalId }), true));
+        actions.append(button('仅允许这一次', () => post({ type: 'allowApproval', id: item.approvalId }), false, !item.allowEnabled)); node.append(actions); root.append(node);
+      });
+    }
+    function renderComposer() {
+      const chips = el('chips'); chips.replaceChildren(); model.context.forEach(item => { const chip = document.createElement('span'); chip.className = 'chip'; const label = document.createElement('span'); label.textContent = item.kind + ': ' + item.label + (item.lines ? ':' + item.lines.start + '-' + item.lines.end : ''); chip.append(label, button('×', () => post({ type: 'removeContext', id: item.id }))); chips.append(chip); });
+      el('prompt').disabled = !model.activeSessionId || !model.models.routable; el('send').disabled = !model.activeSessionId || !model.models.routable; el('cancel').disabled = !model.running;
+      el('queue').textContent = model.queued ? '排队中：' + model.queued : '';
+    }
+    function renderSkillMenu() {
+      const input = el('prompt'); const menu = el('skillmenu'); const match = input.value.match(/^\\/([a-z0-9-]*)$/); menu.replaceChildren();
+      if (!match) { menu.style.display = 'none'; return; }
+      const needle = match[1]; const matches = model.skills.filter(item => item.name.startsWith(needle));
+      matches.forEach(item => menu.append(button('/' + item.name + ' — ' + item.description, () => { input.value = '/' + item.name + ' '; menu.style.display = 'none'; saveState(); input.focus(); }, true)));
+      menu.style.display = matches.length ? 'block' : 'none';
+    }
+    function render() {
+      const scroll = el('conversation-scroll'); const previousScrollTop = scroll.scrollTop; const nearBottom = scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 80;
+      const nextApprovalKey = model.approvals.map(item => item.approvalId + ':' + item.kind).join('|');
+      renderStatus(); renderSessionControl(); renderSettings(); renderConversation(); renderApprovals(); renderComposer(); showPage(page);
+      if ((nextApprovalKey && nextApprovalKey !== approvalKey) || nearBottom) scroll.scrollTop = scroll.scrollHeight; else scroll.scrollTop = previousScrollTop;
+      approvalKey = nextApprovalKey;
+    }
+    el('open-settings').onclick = () => showPage('settings'); el('back-to-chat').onclick = () => showPage('chat'); el('settings-done').onclick = () => showPage('chat');
+    el('new-session').onclick = () => post({ type: 'newSession' }); el('quick-start').onclick = () => post({ type: 'command', command: 'start' });
+    el('start').onclick = () => post({ type: 'command', command: 'start' }); el('stop').onclick = () => post({ type: 'command', command: 'stop' }); el('restart').onclick = () => post({ type: 'command', command: 'restart' });
+    el('model-config').onclick = () => post({ type: 'command', command: 'configureModel' }); el('default-permission').onclick = () => post({ type: 'command', command: 'selectDefaultPermission' }); el('output').onclick = () => post({ type: 'command', command: 'showOutput' }); el('advanced-settings').onclick = () => post({ type: 'command', command: 'openSettings' });
+    document.querySelectorAll('[data-command]').forEach(node => { node.onclick = () => post({ type: 'command', command: node.dataset.command }); });
+    el('send').onclick = () => { const prompt = el('prompt'); if (prompt.value.trim()) post({ type: 'prompt', text: prompt.value }); };
+    el('cancel').onclick = () => post({ type: 'cancel' }); el('prompt').value = typeof saved.draft === 'string' ? saved.draft : ''; el('prompt').oninput = () => { saveState(); renderSkillMenu(); }; el('prompt').onkeydown = event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); el('send').click(); } };
+    window.addEventListener('message', event => { if (event.data?.type === 'model') { model = event.data.model; render(); } if (event.data?.type === 'clearPrompt') { el('prompt').value = ''; saveState(); renderSkillMenu(); } }); render(); renderSkillMenu();
   </script>
 </body>
 </html>`
   }
 }
 
-/** Validate a webview message object. */
+function parseViewAction(value: unknown): ViewAction | undefined {
+  if (!isRecord(value) || typeof value['type'] !== 'string') return undefined
+  const type = value['type']
+  if (type === 'command' && isViewCommand(value['command'])) return { type, command: value['command'] }
+  if (type === 'newSession' || type === 'loadOlder' || type === 'cancel') return { type }
+  if (type === 'prompt' && typeof value['text'] === 'string') return { type, text: value['text'] }
+  if (type === 'selectSession' && typeof value['sessionId'] === 'string') return { type, sessionId: value['sessionId'] }
+  if (type === 'selectModel' && typeof value['value'] === 'string') return { type, value: value['value'] }
+  if (type === 'selectPermission' && isPermission(value['value'])) return { type, value: value['value'] }
+  if ((type === 'removeContext' || type === 'openDiff' || type === 'allowApproval' || type === 'rejectApproval')
+    && typeof value['id'] === 'string') return { type, id: value['id'] }
+  return undefined
+}
+
+function isViewCommand(value: unknown): value is ViewCommand {
+  return value === 'start' || value === 'stop' || value === 'restart' || value === 'showOutput'
+    || value === 'openSettings' || value === 'configureModel' || value === 'selectDefaultPermission'
+    || value === 'addSelection' || value === 'addCurrentFile' || value === 'addWorkspace'
+    || value === 'createProjectSkill' || value === 'createUserSkill' || value === 'openSkills'
+}
+
+function isPermission(value: unknown): value is 'read-only' | 'confirm-changes' | 'workspace-write' {
+  return value === 'read-only' || value === 'confirm-changes' || value === 'workspace-write'
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-/** Validate the fixed command allowlist. */
-function isViewCommand(value: unknown): value is ViewCommand {
-  return value === 'start' || value === 'stop' || value === 'restart'
-    || value === 'showOutput' || value === 'openSettings'
-    || value === 'configureModel' || value === 'defaultPermission'
-}
-
-/** Mint a CSP nonce without importing browser-only helpers. */
 function nonceValue(): string {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  let value = ''
-  for (let index = 0; index < 32; index += 1) value += alphabet.charAt(Math.floor(Math.random() * alphabet.length))
-  return value
+  return randomBytes(24).toString('base64url')
 }

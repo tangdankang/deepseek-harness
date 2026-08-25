@@ -1,74 +1,67 @@
-# VS Code Project Stage Summary: P0–P2.1
+# VS Code Project Stage Summary: P0–P2
 
 English | [中文](README.zh.md)
 
-This document records the staged result of the DeepSeek Harness VS Code project. P1 and P2.1 were accepted on 2026-08-24, and the complete P2 plan and D1–D7 are approved. P2.2 has not started.
+This reference records the DeepSeek Harness VS Code product state. P1, P2.0, and P2.1 passed user acceptance on 2026-08-24. The complete P2.2–P2.7 coding loop passed integrated user acceptance on 2026-08-25.
 
 ## Stage Status
 
-| Stage | Result | Current meaning |
+| Stage | State | Result |
 | --- | --- | --- |
-| P0 | Complete | The extension workspace, dedicated `vscode` profile, Host API stdio carrier, build path, and development launch path exist. |
-| P1 | Accepted | VS Code can start, observe, stop, and restart one local DSH runtime with visible state and redacted diagnostics. |
-| P2.0 | Accepted | The [P2 plan](p2-plan.md) and decisions D1–D7 define the approved minimum usable development loop. |
-| P2.1 | Accepted | Secure OpenAI-compatible model onboarding and the three VS Code permission choices passed user acceptance; later work packages have not started. |
+| P0 | Complete | The architecture, trust boundaries, transport choice, process ownership, and product direction are fixed. |
+| P1 | Accepted | The workspace extension owns one local stdio Host, visible lifecycle, redacted diagnostics, graceful shutdown, and a restricted `vscode` profile. |
+| P2.0 | Accepted | D1–D7, three permissions, scope, tool restrictions, and the complete acceptance boundary are fixed. |
+| P2.1 | Accepted | OpenAI-compatible onboarding stores keys in SecretStorage and writes non-secret settings; the bundle exposes the three approved future defaults. |
+| P2.2 | Accepted | Typed Host calls, streams, approval responses, cancellation, event reconciliation, and restart repair. |
+| P2.3 | Accepted | Session list/create/switch, history pages, composer, streaming transcript, model selector, cancellation, and Host tool cards. |
+| P2.4 | Accepted | Bounded selection/file/folder/workspace context, removable tags, and durable exact prompt text. |
+| P2.5 | Accepted | Project/user Skill roots, slash completion, explicit invocation, refresh, folder reveal, and non-overwriting skeletons. |
+| P2.6 | Accepted | Active permissions, exact file Diff approvals, stale rejection, Shell disclosure, and modifying-tool restrictions. |
+| P2.7 | Accepted | The built profile, keyless assembled flow, real-provider task, and complete manual tutorial all passed. |
 
 ## Delivered System
 
-| Component | Responsibility |
-| --- | --- |
-| [`apps/vscode`](../../apps/vscode/README.md) | VS Code workspace extension, activity-bar container, sidebar controls, status bar, commands, runtime ownership, and Extension Host tests. |
-| [`packages/host/apiproxy-stdio`](../../packages/host/apiproxy-stdio/README.md) | Versioned newline-delimited JSON-RPC carrier over stdin/stdout, with protocol initialization and graceful shutdown. |
-| [`packages/bundle/vscode-app`](../../packages/bundle/vscode-app/README.md) | Long-lived `vscode` Host composition with persistence, Workspace services, Host API dispatch, and the stdio carrier. |
-| [`packages/host/apiproxy/src/dispatch.ts`](../../packages/host/apiproxy/src/dispatch.ts) | Transport-independent Host API method dispatch shared by the existing carrier and the new stdio carrier. |
+The extension owns one local `dsh --profile vscode` process. Its typed newline-delimited JSON-RPC client establishes mux and host subscriptions before history repair, correlates server requests, supports cancellation, closes pending operations deterministically, and restores tracked sessions after restart. Provider keys remain in VS Code SecretStorage and enter only the scrubbed owned child through generated credential references.
 
-## P1 User Experience
+The CSP Webview displays ordinary sessions, restored and paginated history, streaming Markdown, reasoning status without private reasoning text, Host-authored generic/terminal/Diff tool cards, runtime state, model and permission selectors, cancellation, context tags, Skill completion, and approval controls. The Webview receives no process handles, raw Host protocol, filesystem authority, or credentials.
 
-- The activity bar exposes a DeepSeek Harness container and a connection view.
-- The sidebar and status bar show stopped, starting, connected, stopping, and error states.
-- **DSH: Start Runtime**, **DSH: Stop Runtime**, and **DSH: Restart Runtime** own one child process and converge concurrent lifecycle requests.
-- Graceful stop requests `dsh/shutdown`; an unresponsive child is terminated after the configured deadline.
-- The **DeepSeek Harness** output channel retains lifecycle and error diagnostics after credential-like text is redacted.
+Model-visible context is deterministic durable text with source paths and optional line ranges. Folder and workspace context use bounded listings; binary, invalid UTF-8, and oversized content fail visibly. Project and user Skill commands write only the existing provider roots and never overwrite a resource.
 
-## Verification Result
+File review is exact for `write` and literal `edit`. The extension computes the proposed right document from current content, binds approval to the current file digest and existence, and rejects stale or unsupported requests. Shell review shows the exact command, working directory, and reason while stating that arbitrary effects cannot be predicted. Composite or nested modifying paths without equivalent top-level evidence are disabled in the profile.
 
-| Evidence | Result |
-| --- | --- |
-| Focused P0/P1 tests | 7 test files and 59 tests passed. |
-| Built DSH runtime smoke | The real built CLI completed the `vscode` profile handshake and graceful shutdown. |
-| Installed VS Code Extension Host | Extension discovery, activation, and all five contributed commands passed. |
-| Static and package gates | Typecheck, lint, Knip, workspace constraints, publint, translation pairing, package invariants, Cordis configuration, and runtime-closure checks passed for the delivered surface. |
-| Documentation gates | 27 of 28 `doc-sync` leaves passed; the remaining Windows symlink check failed with the accepted Developer Mode/EPERM environment limitation. |
-| Repository baseline | The accepted baseline remains 12,877 passed, 59 skipped, and 36 failed tests: 32 Windows symlink EPERM cases and 4 full-suite timeout cases. P1 acceptance used focused tests instead of redefining this baseline. |
+## Verification State
 
-## P2.1 Stage Result
+Focused unit tests cover protocol framing, type validation, streams, cancellation, history/live overlap, projections, transcript rendering, context limits, Skill creation, permissions, Diff generation, stale approval, and process teardown. Product snapshots cover the assembled Webview and a keyless end-to-end conversation flow through a real stdio fixture process. A built-profile smoke starts the real `vscode` bundle and exercises Host settings and session APIs without a model key.
 
-- **DSH: Configure OpenAI-compatible Model** writes non-secret route and future-session model values through the Host settings API, keeps the key in VS Code SecretStorage, and restarts the owned child with only generated `DSH_VSCODE_*_API_KEY` references.
-- **DSH: Select Default Permission** writes the future-session default through the `permission` Settings namespace.
-- The `vscode` profile exposes only **Read-only**, **Confirm changes**, and **Workspace writes**; **Confirm changes** is the default.
-- Focused configuration, runtime, bundle, sidebar snapshot, TypeScript, Host build, extension build, and built-profile tests pass. The built-profile test proves DSH receives the route and default model while the key remains absent from settings responses.
-- The user accepted P2.1 on 2026-08-24. P2.2 remains unstarted until the user explicitly requests it.
+Host package builds, extension bundling, TypeScript project builds, focused lint, runtime-closure checks, documentation checks, and diff hygiene form the outgoing verification set. Windows symlink creation can still block one documentation leaf and the NodeNext consumer check with the accepted `EPERM` host limitation.
 
-## Security and Model State
+## Security State
 
-- The extension passes an operating-system and DSH-location environment allowlist to the child instead of inheriting ambient model credentials.
-- Extension-managed keys remain in VS Code SecretStorage and are injected only under generated credential references; provider settings and Host responses remain value-free.
-- Provider values previously supplied in conversation are absent from source files, logs, snapshots, and generated documents.
-- The disclosed credential must be rotated before a real-provider acceptance run; P2.1 tests use generated fixture values only.
+- Provider keys do not enter source, settings JSON, command arguments, Host responses, logs, snapshots, fixtures, or documentation.
+- Ambient model credentials are removed from the child environment; only extension-owned values are admitted.
+- User text and Markdown cross the Webview boundary only through validated view data; raw HTML and remote resources do not receive CSP authority.
+- Context and Diff inputs fail closed on invalid encoding, binary content, size limits, ambiguous edits, unsupported tools, or stale files.
+- `read-only`, `confirm-changes`, and `workspace-write` are the only permission choices; danger-full-access and unreviewable modifying tool paths are absent.
+
+## P2 Acceptance Result
+
+The user completed the [P2 acceptance tutorial](p2-acceptance.md) on 2026-08-25. The accepted flow covers runtime and model persistence, ordinary conversation, editor context, explicit Skill invocation, rejection without mutation, stale-Diff protection, one-shot approval, Shell disclosure, all three permissions, cancellation, restart, and window-reopen recovery.
 
 ## Known Limits
 
-- There is no conversation composer or transcript in the VS Code view.
-- The extension does not yet consume Host mux events for streamed assistant text or tool lifecycle updates.
-- Current file, selection, file, folder, and workspace context cannot yet be added to a prompt.
-- Session listing, switching, history paging, and restart recovery have no VS Code presentation.
-- Per-operation approval has no VS Code UI yet; model onboarding alone does not make the profile ready for coding tasks.
+- One extension instance owns one runtime and defaults a multi-root workspace to its first folder.
+- Provider onboarding configures one OpenAI-compatible route at a time.
+- P2 has no multi-file transaction, rollback, remembered approvals, interactive PTY, semantic code search, Git workflow, or remote runtime.
+- Arbitrary Shell effects cannot be represented as a reliable pre-execution Diff.
 
 ## Project Artifacts
 
-- The [development handoff](development-handoff.md) gives a new coding agent the current state, operating rules, and P2.2 entry point.
-- The [P2.1 acceptance tutorial](p2-1-acceptance.md) records the completed manual verification.
-- The approved implementation sequence is the [P2 Minimum Usable Development Loop plan](p2-plan.md).
-- The architecture decision for P0/P1 is recorded in the [VS Code Host stdio runtime Agent Note](../../.agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md).
-- P2.1 secret and permission ownership is recorded in the [VS Code model and permission onboarding Agent Note](../../.agents/notes/implemented/feature/2026-08-24-vscode-model-permission-onboarding.md).
-- A standalone Chinese review copy combines this summary and the P2 proposal in [`stage-summary-and-p2-plan.html`](stage-summary-and-p2-plan.html).
+- [Development handoff](development-handoff.md)
+- [P2 completion and reuse report](p2-completion-and-reuse-report.html)
+- [Approved P2 plan](p2-plan.md)
+- [Complete P2 acceptance tutorial](p2-acceptance.md)
+- [P2.1 onboarding acceptance tutorial](p2-1-acceptance.md)
+- [VS Code extension reference](../../apps/vscode/README.md)
+- [Host runtime decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md)
+- [Model and permission decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-model-permission-onboarding.md)
+- [P2 coding-loop decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-p2-coding-loop.md)

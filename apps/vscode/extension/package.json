@@ -1,12 +1,12 @@
 {
   "name": "dsh-vscode",
   "displayName": "DeepSeek Harness",
-  "description": "Run DeepSeek Harness as a coding agent inside VS Code.",
+  "description": "在 VS Code 中使用 DeepSeek Harness 编码助手。",
   "version": "0.1.0",
   "publisher": "deepseek-ai",
   "license": "MIT",
   "engines": {
-    "vscode": "^1.100.0"
+    "vscode": "^1.106.0"
   },
   "categories": [
     "Machine Learning",
@@ -17,57 +17,124 @@
   ],
   "main": "./dist/extension.cjs",
   "activationEvents": [
+    "onStartupFinished",
     "onView:dsh.chat",
     "onCommand:dsh.start",
     "onCommand:dsh.configureModel",
-    "onCommand:dsh.selectDefaultPermission"
+    "onCommand:dsh.selectDefaultPermission",
+    "onCommand:dsh.newSession",
+    "onCommand:dsh.addSelection",
+    "onCommand:dsh.createProjectSkill"
   ],
   "contributes": {
     "commands": [
       {
         "command": "dsh.start",
-        "title": "DSH: Start Runtime"
+        "title": "DSH：启动运行时"
       },
       {
         "command": "dsh.stop",
-        "title": "DSH: Stop Runtime"
+        "title": "DSH：停止运行时"
       },
       {
         "command": "dsh.restart",
-        "title": "DSH: Restart Runtime"
+        "title": "DSH：重新启动运行时"
       },
       {
         "command": "dsh.showOutput",
-        "title": "DSH: Show Runtime Output"
+        "title": "DSH：查看运行时输出"
       },
       {
         "command": "dsh.openSettings",
-        "title": "DSH: Open Runtime Settings"
+        "title": "DSH：打开运行时设置"
       },
       {
         "command": "dsh.configureModel",
-        "title": "DSH: Configure OpenAI-compatible Model"
+        "title": "DSH：配置 OpenAI 兼容模型"
       },
       {
         "command": "dsh.selectDefaultPermission",
-        "title": "DSH: Select Default Permission"
+        "title": "DSH：选择默认权限"
+      },
+      {
+        "command": "dsh.newSession",
+        "title": "DSH：新建对话"
+      },
+      {
+        "command": "dsh.addSelection",
+        "title": "DSH：把选区加入输入内容"
+      },
+      {
+        "command": "dsh.addCurrentFile",
+        "title": "DSH：把当前文件加入输入内容"
+      },
+      {
+        "command": "dsh.addExplorerFile",
+        "title": "DSH：把文件加入输入内容"
+      },
+      {
+        "command": "dsh.addExplorerFolder",
+        "title": "DSH：把文件夹列表加入输入内容"
+      },
+      {
+        "command": "dsh.addWorkspaceContext",
+        "title": "DSH：把工作区列表加入输入内容"
+      },
+      {
+        "command": "dsh.createProjectSkill",
+        "title": "DSH：创建项目 Skill"
+      },
+      {
+        "command": "dsh.createUserSkill",
+        "title": "DSH：创建用户 Skill"
+      },
+      {
+        "command": "dsh.openSkillsFolder",
+        "title": "DSH：打开 Skills 文件夹"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
+    "menus": {
+      "editor/context": [
         {
-          "id": "dsh",
+          "command": "dsh.addSelection",
+          "when": "editorHasSelection",
+          "group": "dsh@1"
+        },
+        {
+          "command": "dsh.addCurrentFile",
+          "group": "dsh@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "dsh.addExplorerFile",
+          "when": "resourceScheme == file && !explorerResourceIsFolder",
+          "group": "dsh@1"
+        },
+        {
+          "command": "dsh.addExplorerFolder",
+          "when": "resourceScheme == file && explorerResourceIsFolder",
+          "group": "dsh@2"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "dsh-chat-container",
           "title": "DeepSeek Harness",
           "icon": "media/dsh.svg"
         }
       ]
     },
     "views": {
-      "dsh": [
+      "dsh-chat-container": [
         {
           "id": "dsh.chat",
-          "name": "Coding Agent",
-          "type": "webview"
+          "name": "编码助手",
+          "type": "webview",
+          "icon": "media/dsh.svg",
+          "visibility": "visible"
         }
       ]
     },
@@ -77,7 +144,7 @@
         "dsh.runtime.command": {
           "type": "string",
           "default": "dsh",
-          "description": "Executable used to start DeepSeek Harness in the current Extension Host environment."
+          "description": "用于在当前扩展宿主环境中启动 DeepSeek Harness 的可执行文件。"
         },
         "dsh.runtime.args": {
           "type": "array",
@@ -88,31 +155,73 @@
             "--profile",
             "vscode"
           ],
-          "description": "Arguments passed to the DeepSeek Harness executable."
+          "description": "传给 DeepSeek Harness 可执行文件的参数。"
         },
         "dsh.runtime.cwd": {
           "type": "string",
           "default": "",
-          "description": "Runtime working directory. An empty value uses the first workspace folder or the Extension Host working directory."
+          "description": "运行时工作目录。留空时使用第一个工作区文件夹；没有打开工作区文件夹时无法启动。"
         },
         "dsh.runtime.startOnOpen": {
           "type": "boolean",
           "default": false,
-          "description": "Start the DeepSeek Harness runtime when the extension activates."
+          "description": "扩展激活时启动 DeepSeek Harness 运行时。"
         },
         "dsh.runtime.handshakeTimeoutMs": {
           "type": "number",
           "default": 15000,
           "minimum": 1000,
           "maximum": 120000,
-          "description": "Maximum time to wait for each runtime readiness request during startup."
+          "description": "启动期间等待每次运行时就绪请求的最长时间。"
         },
         "dsh.runtime.stopTimeoutMs": {
           "type": "number",
           "default": 5000,
           "minimum": 1000,
           "maximum": 60000,
-          "description": "Maximum time to wait for graceful runtime shutdown before terminating the child process."
+          "description": "终止子进程前等待运行时正常停止的最长时间。"
+        },
+        "dsh.context.maxFileBytes": {
+          "type": "number",
+          "default": 131072,
+          "minimum": 1024,
+          "maximum": 10485760,
+          "description": "单个文件或选区上下文在不截断时允许的最大 UTF-8 字节数。"
+        },
+        "dsh.context.maxTotalBytes": {
+          "type": "number",
+          "default": 524288,
+          "minimum": 4096,
+          "maximum": 20971520,
+          "description": "一个草稿中所有上下文标签合计保留的最大 UTF-8 字节数。"
+        },
+        "dsh.context.maxFolderFiles": {
+          "type": "number",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 5000,
+          "description": "一个文件夹或工作区列表上下文允许包含的最大路径数。"
+        },
+        "dsh.conversation.historyPageMessages": {
+          "type": "number",
+          "default": 40,
+          "minimum": 1,
+          "maximum": 200,
+          "description": "每页对话请求的完整消息记录数。"
+        },
+        "dsh.conversation.maxToolOutputChars": {
+          "type": "number",
+          "default": 16000,
+          "minimum": 1000,
+          "maximum": 200000,
+          "description": "单个 Webview 工具卡片保留的最大结果字符数。"
+        },
+        "dsh.conversation.maxDiffBytes": {
+          "type": "number",
+          "default": 524288,
+          "minimum": 1024,
+          "maximum": 10485760,
+          "description": "单次执行前准确差异审阅允许的最大 UTF-8 字节数。"
         }
       }
     }

@@ -49,5 +49,8 @@ describe('dsh-vscode-app bundle', () => {
       'confirm-changes',
       'workspace-write',
     ])
+    for (const id of ['tool-str-replace-editor', 'tool-subagent', 'tool-subagent-fork', 'tool-workflow', 'tool-ralph']) {
+      expect(parsed).toContainEqual(expect.objectContaining({ id, disabled: true }))
+    }
   })
 })

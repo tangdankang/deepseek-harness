@@ -21,7 +21,22 @@ pnpm --filter @deepseek-ai/dsh-vscode run build
 code --extensionDevelopmentPath="E:\E_AI\DSH\deepseek-harness-myPcVs\apps\vscode\extension" "E:\E_AI\DSH\deepseek-harness-myPcVs"
 ```
 
-In the new Extension Development Host, open **DeepSeek Harness** in the activity bar and select **Start**. Acceptance requires the connected state and no error notification.
+In the new Extension Development Host, open **DeepSeek Harness** in the activity bar and select **Start**. Press `Ctrl+Shift+P`, run **Preferences: Open User Settings (JSON)**, and add this configuration to the JSON object:
+
+```json
+{
+  "dsh.runtime.command": "C:\\Program Files\\nodejs\\node.exe",
+  "dsh.runtime.args": [
+    "E:\\E_AI\\DSH\\deepseek-harness-myPcVs\\apps\\cli\\lib\\bin.js",
+    "--profile",
+    "vscode"
+  ],
+  "dsh.runtime.cwd": "E:\\E_AI\\DSH\\deepseek-harness-myPcVs",
+  "dsh.runtime.startOnOpen": false
+}
+```
+
+Acceptance requires the connected state and no error notification.
 
 ## 2. Configure the Model
 

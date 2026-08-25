@@ -171,7 +171,8 @@ export function apply(ctx: Context, config: Config = {}): void {
   // Only `source.kind === 'user'` messages are scanned — external text
   // cannot forge the gesture — and a token naming no user-invocable skill
   // stays ordinary prose (the command registry is a different closed
-  // namespace, resolved client-side before a line ever becomes a prompt).
+  // namespace; session.prompt gives a same-name command priority, then admits
+  // a known user-invocable Skill to this pre-step listener).
   // This is the only entry point for `disable-model-invocation` skills; the
   // catalog and the `skill` tool below never see them.
   ctx.on('agent/pre-step', async (

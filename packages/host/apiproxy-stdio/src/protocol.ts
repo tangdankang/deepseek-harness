@@ -7,17 +7,19 @@ import type { Branded } from '@deepseek-ai/dsh-brand'
 import type { ServerRequest } from '@deepseek-ai/dsh-host-apiproxy'
 
 /** Current version of the stdio Host API carrier protocol. */
-export const HOST_STDIO_PROTOCOL_VERSION = 1
+export const HOST_STDIO_PROTOCOL_VERSION = 2
 
 /** JSON-RPC method names owned by this carrier. */
 export const HOST_STDIO_METHODS = {
   initialize: 'dsh/initialize',
   request: 'dsh/request',
+  cancel: 'dsh/cancel',
   respond: 'dsh/respond',
   subscribe: 'dsh/subscribe',
   unsubscribe: 'dsh/unsubscribe',
   shutdown: 'dsh/shutdown',
   event: 'dsh/event',
+  streamEnd: 'dsh/streamEnd',
 } as const
 
 /** Opaque identifier of one carrier-owned event subscription. */
@@ -57,4 +59,20 @@ export interface HostStdioEventNotification {
   stream: HostStdioStream
   /** Full-form server request, including answerable interaction ids. */
   message: ServerRequest
+}
+
+/** Parameters of a best-effort `dsh/cancel` notification. */
+export interface HostStdioCancelNotification {
+  /** Host API client-request id whose local execution should stop. */
+  rpcId: ServerRequest['rpcId']
+}
+
+/** Parameters emitted once a subscribed Host API iterator settles. */
+export interface HostStdioStreamEndNotification {
+  /** Subscription whose iterator settled. */
+  subscriptionId: HostStdioSubscriptionId
+  /** Logical Host API stream that settled. */
+  stream: HostStdioStream
+  /** Whether the iterator ended itself or was cancelled by its owner. */
+  reason: 'completed' | 'cancelled'
 }

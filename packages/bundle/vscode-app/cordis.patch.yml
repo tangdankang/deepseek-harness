@@ -7,6 +7,25 @@
 - id: hmr
   disabled: true
 
+# P2 exposes only mutation paths whose exact top-level intent can be reviewed.
+# write/edit provide diff cards and the native shell tool provides its command;
+# nested editors, delegation, workflows, and iterative child-agent tools stay
+# unavailable until their complete mutation trajectory can use the same UI.
+- id: tool-str-replace-editor
+  disabled: true
+
+- id: tool-subagent
+  disabled: true
+
+- id: tool-subagent-fork
+  disabled: true
+
+- id: tool-workflow
+  disabled: true
+
+- id: tool-ralph
+  disabled: true
+
 # VS Code exposes only the three reviewed product modes. The composition
 # default is confirm-changes; each new session persists the selected preset
 # and its underlying sandbox and approval values.

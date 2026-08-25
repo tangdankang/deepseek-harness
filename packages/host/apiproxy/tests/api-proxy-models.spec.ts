@@ -17,9 +17,10 @@ import type {
   UserMessage,
 } from '@deepseek-ai/dsh-llm'
 import SessionStore from '@deepseek-ai/dsh-session'
-import type { SessionId } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
 import UserQuestionService from '@deepseek-ai/dsh-user-questions'
+import CommandRuntime from '@deepseek-ai/dsh-commands'
+import SkillRegistry from '@deepseek-ai/dsh-skill'
 import type { RpcRequest } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { RpcId } from '@deepseek-ai/dsh-host-apiproxy/api/rpc'
 import { createApiProxy } from '../src/api-proxy.ts'
@@ -77,16 +78,14 @@ async function harness(logged?: {
   provider: string
   model: string
   reasoningEffort?: ReasoningEffortId
-}): Promise<{
-  ctx: Context
-  agent: Agent
-  sessionId: SessionId
-}> {
+}) {
   const ctx = new Context()
   await ctx.plugin(SessionStore)
   await ctx.plugin(SystemPrompt, { persona: '' })
   await ctx.plugin(LlmRuntime)
   await ctx.plugin(UserQuestionService)
+  await ctx.plugin(CommandRuntime)
+  await ctx.plugin(SkillRegistry)
   await ctx.plugin(AgentRegistry)
   ctx.llm.registerAdapter(['deepseek-official'], new CatalogAdapter('DeepSeek', [
     { provider: 'deepseek-official', id: 'deepseek-chat', name: 'DeepSeek Chat' },
@@ -105,15 +104,19 @@ async function harness(logged?: {
   if (logged !== undefined) {
     session.append('request/header', { header: { config: logged }, reason: 'initial' })
   }
+  const followup = vi.fn((_message: UserMessage): void => {})
+  const steer = vi.fn((_message: UserMessage): void => {})
   const agent = {
     id: session.id,
     session,
     status: 'running',
     ctx,
     inbox: { nextTurn: [], nextStep: [] },
+    followup,
+    steer,
   } as unknown as Agent
   ctx.agents.register(agent)
-  return { ctx, agent, sessionId: session.id }
+  return { ctx, agent, sessionId: session.id, followup }
 }
 
 function expectValue<T>(response: { result: { ok: true; value: T } | { ok: false } }): T {
@@ -483,6 +486,96 @@ describe('Web session model selection', () => {
     expect(catalog.routable).toBe(true)
     expect(catalog.groups.flatMap(group => group.models.map(model => model.id)))
       .not.toContain('unlisted-but-served')
+    await ctx.fiber.dispose()
+  })
+
+  it('dispatches an exact slash prompt through commands without entering a model turn', async () => {
+    const { ctx, agent, sessionId } = await harness()
+    ctx.commands.register({
+      name: 'echo',
+      description: 'Echo command input.',
+      handler: ({ rawInput }) => ({ kind: 'success', text: rawInput.trim() }),
+    })
+    ctx.commands.register({
+      name: 'refuse',
+      description: 'Return a command-owned error.',
+      handler: () => ({ kind: 'error', text: 'command refused' }),
+    })
+    const api = createApiProxy(ctx, {
+      // Commands remain usable while the selected model route is unavailable.
+      defaultModelSelection: () => ({ provider: 'deleted-gateway', model: 'deleted-model' }),
+      cwd: '/tmp',
+    })
+
+    const success = await api.sessions.prompt(request({
+      sessionId, mode: 'queue' as const, content: [{ type: 'text' as const, text: '/echo hello' }],
+    }), new AbortController().signal)
+    expect(success.result).toMatchObject({
+      ok: true, value: { accepted: true, command: { kind: 'success', text: 'hello' } },
+    })
+    expect(agent.session.events.map(event => event.type)).toEqual(['command/run', 'command/done'])
+
+    const refused = await api.sessions.prompt(request({
+      sessionId, mode: 'steer' as const, content: [{ type: 'text' as const, text: '/refuse' }],
+    }))
+    expect(refused.result).toMatchObject({ ok: false, error: { code: 'command-error', message: 'command refused' } })
+
+    const unknown = await api.sessions.prompt(request({
+      sessionId, mode: 'queue' as const, content: [{ type: 'text' as const, text: '/missing value' }],
+    }))
+    expect(unknown.result).toMatchObject({ ok: false, error: { code: 'unknown-command' } })
+    expect(agent.session.events.some(event => event.type === 'user/message' || event.type === 'turn/start')).toBe(false)
+    await ctx.fiber.dispose()
+  })
+
+  it('admits a user-invocable Skill after slash-command resolution misses', async () => {
+    const { ctx, agent, sessionId, followup } = await harness()
+    ctx.skills.register({
+      name: 'acceptance-helper',
+      description: 'Assist with acceptance checks.',
+      source: 'runtime',
+      content: 'Begin the response with SKILL_OK.',
+    })
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'deepseek-official', model: 'deepseek-chat' }),
+      cwd: '/tmp',
+    })
+
+    const admitted = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: '/acceptance-helper confirm briefly' }],
+    }))
+    expect(admitted.result).toMatchObject({ ok: true, value: { accepted: true } })
+    expect(followup).toHaveBeenCalledOnce()
+    expect(followup.mock.calls[0]?.[0].content).toEqual([
+      { type: 'text', text: '/acceptance-helper confirm briefly' },
+    ])
+    expect(agent.session.events.some(event => event.type === 'command/run')).toBe(false)
+
+    ctx.commands.register({
+      name: 'acceptance-helper',
+      description: 'Shadow the Skill with a command.',
+      handler: () => ({ kind: 'success', text: 'command won' }),
+    })
+    const shadowed = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: '/acceptance-helper confirm briefly' }],
+    }))
+    expect(shadowed.result).toMatchObject({
+      ok: true,
+      value: { accepted: true, command: { kind: 'success', text: 'command won' } },
+    })
+    expect(followup).toHaveBeenCalledOnce()
+
+    const unknown = await api.sessions.prompt(request({
+      sessionId,
+      mode: 'queue' as const,
+      content: [{ type: 'text' as const, text: '/missing-skill confirm briefly' }],
+    }))
+    expect(unknown.result).toMatchObject({ ok: false, error: { code: 'unknown-command' } })
+    expect(followup).toHaveBeenCalledOnce()
     await ctx.fiber.dispose()
   })
 

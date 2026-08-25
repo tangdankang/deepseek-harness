@@ -2,7 +2,7 @@
 
 English | [中文](p2-plan.zh.md)
 
-Status: approved. D1–D7 and the complete plan are accepted; P2.1 passed user acceptance on 2026-08-24, and P2.2 has not started.
+Status: implemented and accepted. D1–D7 and the complete plan are accepted; P2.1 passed user acceptance on 2026-08-24, and the P2.2–P2.7 coding loop passed integrated acceptance on 2026-08-25.
 
 ## Goal
 
@@ -10,7 +10,7 @@ P2 delivers the first complete coding loop inside VS Code: the user creates or r
 
 ## Current Stage
 
-P2.1 supplies secure OpenAI-compatible provider onboarding and the three approved permission choices. Its accepted stage result is recorded in the [project summary](README.md). P2.2 is the next work package and starts only when the user explicitly requests it.
+The complete P2 implementation has passed its integrated acceptance boundary. The [project summary](README.md) records the accepted state, the [P2 acceptance tutorial](p2-acceptance.md) remains the reusable verification procedure, and the [development handoff](development-handoff.md) owns the next improvement and reuse priorities.
 
 ## Acceptance Boundary
 
@@ -52,7 +52,7 @@ P2 is accepted only when DSH can complete a small real repository change through
 | Permission presets and projections | DSH persists per-session sandbox and approval settings, but the `vscode` profile needs distinct read-only, confirm-changes, and workspace-write product choices. |
 | `settings.*`, credentials, and model selection | Already support redacted settings views, custom provider metadata, and per-session model selection; VS Code SecretStorage remains the proposed key owner. |
 
-## Proposed Design
+## Implemented Design
 
 ### Runtime and Protocol Client
 
@@ -140,7 +140,7 @@ The proposed source of truth is VS Code SecretStorage for the key, with non-secr
 10. Switch to **Workspace writes** only for the test fixture, request an in-workspace edit, and confirm it runs automatically while outside-workspace access still asks or fails.
 11. Restart the Extension Development Host, select the previous session, and confirm the transcript, permission value, Skill evidence, Diffs, and decisions are restored without duplicate events.
 
-## Review Points Before Implementation
+## Fixed Product Decisions
 
 | ID | Proposed decision | Consequence |
 | --- | --- | --- |
@@ -152,12 +152,13 @@ The proposed source of truth is VS Code SecretStorage for the key, with non-secr
 | D6 | Show an exact Diff for file tools and the exact command plus an explicit warning for shell escalation. | File edits are reviewable before execution; terminal effects are disclosed but cannot be predicted. |
 | D7 | Require keyless snapshots, Extension Host tests, one real-provider task, and the eleven-step Chinese manual flow. | The accepted 36-failure environment baseline remains unchanged while every P2 behavior gains targeted evidence. |
 
-## Stop Condition
+## Completion Condition
 
-The approved plan authorizes one work package at a time. Each work package stops after reporting its stage result and waits for user acceptance before the next package starts. P2.1 acceptance clears its stage block; P2.2 remains unstarted until the user explicitly requests it.
+P2 is complete because the real-provider workflow satisfied the acceptance boundary: the user reviewed and rejected a proposed edit without mutation, protected a manual change from a stale Diff, allowed the reviewed edit once, exercised Shell and permission controls, and restored the session after restart. New work starts from the post-P2 priorities in the development handoff and receives its own scope and acceptance boundary.
 
 ## Related Documents
 
-- [P0–P2.1 stage summary](README.md)
+- [P0–P2 stage summary](README.md)
+- [Complete P2 acceptance tutorial](p2-acceptance.md)
 - [VS Code extension contract](../../apps/vscode/README.md)
 - [Original P0/P1 architecture decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md)

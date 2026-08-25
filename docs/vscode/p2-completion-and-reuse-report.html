@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DeepSeek Harness VS Code：P2 完成与复用路线汇报</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07101e;
+      --panel: rgba(17, 29, 49, .92);
+      --panel-2: rgba(11, 21, 38, .94);
+      --line: #2a3b59;
+      --text: #edf3ff;
+      --muted: #a7b5ca;
+      --blue: #73adff;
+      --cyan: #55dfd2;
+      --green: #60db91;
+      --amber: #ffd06a;
+      --red: #ff8b92;
+      --shadow: 0 18px 64px rgba(0, 0, 0, .3);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% -6%, rgba(57, 117, 218, .28), transparent 34rem),
+        radial-gradient(circle at 94% 6%, rgba(37, 184, 164, .17), transparent 30rem),
+        var(--bg);
+      color: var(--text);
+      font: 15px/1.72 "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+    a { color: var(--cyan); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { max-width: 900px; margin-bottom: 14px; font-size: clamp(32px, 5vw, 56px); line-height: 1.1; letter-spacing: -.04em; }
+    h2 { margin-bottom: 14px; font-size: 24px; letter-spacing: -.02em; }
+    h3 { margin-bottom: 8px; font-size: 17px; }
+    p { margin-bottom: 9px; }
+    ul, ol { margin: 10px 0 0; padding-left: 21px; }
+    li + li { margin-top: 6px; }
+    code { padding: 2px 6px; border: 1px solid #344866; border-radius: 6px; background: #0b1628; color: #d5e4ff; }
+    .page { width: min(1160px, calc(100% - 32px)); margin: 0 auto; padding: 34px 0 70px; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 44px;
+      border: 1px solid var(--line);
+      border-radius: 25px;
+      background: linear-gradient(135deg, rgba(28, 45, 77, .98), rgba(10, 23, 42, .94));
+      box-shadow: var(--shadow);
+    }
+    .hero::after {
+      content: "";
+      position: absolute;
+      width: 330px;
+      height: 330px;
+      right: -105px;
+      top: -150px;
+      border: 58px solid rgba(115, 173, 255, .08);
+      border-radius: 50%;
+    }
+    .eyebrow { color: var(--cyan); font-weight: 750; letter-spacing: .11em; text-transform: uppercase; }
+    .lead { max-width: 860px; color: #c5d1e3; font-size: 18px; }
+    .badges { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+    .badge { padding: 6px 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(0, 0, 0, .18); font-size: 13px; font-weight: 700; }
+    .badge.ok { color: var(--green); border-color: rgba(96, 219, 145, .42); }
+    .nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 24px; }
+    .nav a, .print { padding: 7px 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); color: var(--text); }
+    .print { cursor: pointer; font: inherit; }
+    .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+    .card { grid-column: span 6; padding: 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--panel); box-shadow: 0 10px 36px rgba(0, 0, 0, .16); }
+    .wide { grid-column: 1 / -1; }
+    .third { grid-column: span 4; }
+    .metric { font-size: 32px; line-height: 1.15; font-weight: 780; letter-spacing: -.04em; }
+    .metric-label { color: var(--muted); font-size: 13px; }
+    .success { color: var(--green); }
+    .accent { color: var(--blue); }
+    .warning { color: var(--amber); }
+    .muted { color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 12px 13px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: #ced9eb; background: rgba(255, 255, 255, .025); font-size: 13px; }
+    td:first-child { white-space: nowrap; }
+    .roadmap { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 14px; padding: 16px 0; border-top: 1px solid var(--line); }
+    .roadmap:first-of-type { border-top: 0; }
+    .roadmap-id { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(115, 173, 255, .13); color: var(--blue); font-weight: 800; }
+    .callout { margin-top: 16px; padding: 14px 16px; border-left: 3px solid var(--amber); background: rgba(255, 208, 106, .07); color: #ead9ad; }
+    .footer { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+    @media (max-width: 820px) {
+      .page { width: min(100% - 20px, 1160px); padding-top: 12px; }
+      .hero { padding: 26px; border-radius: 18px; }
+      .card, .third { grid-column: 1 / -1; padding: 19px; }
+      .table-wrap { overflow-x: auto; }
+    }
+    @media print {
+      :root { color-scheme: light; --bg: #fff; --panel: #fff; --panel-2: #fff; --line: #cbd3df; --text: #172033; --muted: #526078; --blue: #205fb9; --cyan: #087a70; --green: #14703d; --amber: #8a5b00; }
+      body { background: #fff; }
+      .page { width: 100%; padding: 0; }
+      .hero, .card { box-shadow: none; break-inside: avoid; }
+      .nav, .print { display: none; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div class="eyebrow">DeepSeek Harness · VS Code</div>
+      <h1>P2 完成汇报与<br>改进、复用路线</h1>
+      <p class="lead">DeepSeek Harness VS Code 已形成从模型配置、对话与上下文，到 Skill 调用、执行前审批、文件修改和重启恢复的完整编码闭环。完整 P2 流程于 2026-08-25 通过用户验收，项目进入稳定性、分发与他人复用阶段。</p>
+      <div class="badges">
+        <span class="badge ok">P0–P2 全部完成</span>
+        <span class="badge ok">真实提供方验收通过</span>
+        <span class="badge ok">拒绝 / 一次性允许 / 陈旧 Diff 保护通过</span>
+        <span class="badge">不包含 API 密钥</span>
+      </div>
+    </header>
+
+    <nav class="nav" aria-label="文档导航">
+      <a href="#result">验收结论</a>
+      <a href="#capabilities">已交付能力</a>
+      <a href="#evidence">验证证据</a>
+      <a href="#reuse">复用准备度</a>
+      <a href="#roadmap">后续路线</a>
+      <button class="print" type="button" onclick="window.print()">打印 / 导出 PDF</button>
+    </nav>
+
+    <section id="result" class="grid">
+      <article class="card third">
+        <div class="metric success">已通过</div>
+        <div class="metric-label">P2 完整用户验收</div>
+      </article>
+      <article class="card third">
+        <div class="metric accent">16 步</div>
+        <div class="metric-label">可重复执行的中文验收教程</div>
+      </article>
+      <article class="card third">
+        <div class="metric success">3 种</div>
+        <div class="metric-label">只读、确认后更改、工作区写入权限</div>
+      </article>
+
+      <article class="card wide">
+        <h2>管理摘要</h2>
+        <p>项目已经越过“能够连接模型”的原型阶段，具备可实际完成小型开发任务的最小产品闭环。用户可以在 VS Code 右侧栏创建或恢复会话，携带编辑器上下文和 Skill 发起任务，在执行前审阅文件 Diff 或 Shell 命令，并在拒绝、一次性允许和不同权限之间保持明确控制。</p>
+        <p>验收过程中暴露的易用性与恢复问题已经进入产品基线：模型配置持久化、右侧栏常驻、中文界面、独立设置页、醒目的新建对话、底部审批、历史缺口自动修复、Skill 斜杠补全，以及无工作区时的直接启动诊断。</p>
+      </article>
+    </section>
+
+    <section id="capabilities" class="grid" style="margin-top:16px">
+      <article class="card">
+        <h2>开发闭环</h2>
+        <ul>
+          <li>会话创建、选择、分页历史、流式 Markdown、工具卡片与取消。</li>
+          <li>选区、文件、文件夹和工作区上下文，带路径、范围与大小限制。</li>
+          <li>项目级和用户级 Skill，支持创建、发现、刷新、补全与显式调用。</li>
+          <li>准确文件 Diff、Shell 命令披露、拒绝与一次性允许。</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>可靠性与恢复</h2>
+        <ul>
+          <li>扩展持有本地 stdio Host，建立类型化请求、流与取消。</li>
+          <li>历史与实时事件持续校准，序号缺口会自动补齐。</li>
+          <li>模型、权限、会话和凭据在视图切换与窗口重开后恢复。</li>
+          <li>没有工作区文件夹时拒绝从 VS Code 安装目录启动。</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>用户体验</h2>
+        <ul>
+          <li>DSH 位于右侧辅助侧边栏，与代码编辑区并排使用。</li>
+          <li>核心运行和对话控件中文化，配置集中在独立设置页。</li>
+          <li>新建对话和审批状态具有明确视觉层级。</li>
+          <li>审批卡片位于记录底部并自动滚入视野。</li>
+        </ul>
+      </article>
+      <article class="card">
+        <h2>安全属性</h2>
+        <ul>
+          <li>API 密钥保留在 VS Code SecretStorage，不进入 settings、日志或快照。</li>
+          <li>Webview 不持有进程、文件系统或凭据权威。</li>
+          <li>陈旧 Diff、二进制、无效 UTF-8、超限和歧义输入关闭式失败。</li>
+          <li>无法提供同等审阅证据的修改工具路径不进入组合。</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="evidence" class="grid" style="margin-top:16px">
+      <article class="card wide">
+        <h2>验证证据</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>层级</th><th>证据</th><th>结论</th></tr></thead>
+            <tbody>
+              <tr><td>用户验收</td><td class="success">完整 16 步流程通过</td><td>真实提供方、真实 Extension Development Host 和实际文件操作形成闭环。</td></tr>
+              <tr><td>扩展测试</td><td class="success">47 项相关测试；真实 profile 冒烟单独通过</td><td>协议、会话、上下文、Skill、审批、恢复、视图和运行时路径均有定向证据。</td></tr>
+              <tr><td>静态检查</td><td class="success">TypeScript、扩展构建、lint、diff hygiene 通过</td><td>提交范围满足类型与代码卫生要求。</td></tr>
+              <tr><td>界面复验</td><td class="success">隔离 VS Code 实际打开通过</td><td>右侧栏、中文主界面、独立设置页和醒目新建对话得到真实界面确认。</td></tr>
+              <tr><td>文档检查</td><td class="warning">27 / 28</td><td>唯一失败为 Windows 临时目录符号链接创建返回 <code>EPERM</code>，不是产品回归。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="reuse" class="grid" style="margin-top:16px">
+      <article class="card wide">
+        <h2>他人复用准备度</h2>
+        <p>核心运行机制、权限语义、安全边界、验收教程和开发接续已经具备复用基础。当前最大的复用成本不在编码闭环本身，而在安装、运行时发现、首次配置、升级兼容和问题诊断。</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>领域</th><th>当前基础</th><th>进入广泛复用前需要补齐</th></tr></thead>
+            <tbody>
+              <tr><td>安装</td><td>源码 Extension Development Host 可运行</td><td>签名或可验证的 VSIX、版本说明、安装与卸载流程。</td></tr>
+              <tr><td>运行时</td><td>可配置命令、参数与工作目录</td><td>自动发现或随扩展分发运行时，消除绝对路径配置。</td></tr>
+              <tr><td>配置</td><td>SecretStorage 与非机密 settings 分离</td><td>不含凭据的配置导入导出、提供方模板和迁移策略。</td></tr>
+              <tr><td>兼容性</td><td>Windows + VS Code 1.106 以上基线</td><td>明确 Node、VS Code、Windows/macOS/Linux 支持矩阵与 CI。</td></tr>
+              <tr><td>支持</td><td>输出通道、状态和中文验收教程</td><td>诊断包、错误编号、常见问题和隐私安全说明。</td></tr>
+              <tr><td>团队复用</td><td>项目 Skill 与持久上下文</td><td>示例项目、Skill 模板、组织级约定和版本化共享方式。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section id="roadmap" class="grid" style="margin-top:16px">
+      <article class="card wide">
+        <h2>P2 后建议路线</h2>
+        <div class="roadmap"><div class="roadmap-id">A</div><div><h3>稳定性与上手体验</h3><p class="muted">消除手工路径、完善首次启动、收敛设置与恢复行为、改进长会话性能，并把用户验收中的关键路径固化为稳定回归。</p></div></div>
+        <div class="roadmap"><div class="roadmap-id">B</div><div><h3>分发与复用</h3><p class="muted">生成可安装扩展，定义版本与支持矩阵，提供无凭据配置迁移、示例项目、Skill 模板和面向新用户的安装教程。</p></div></div>
+        <div class="roadmap"><div class="roadmap-id">C</div><div><h3>产品改进</h3><p class="muted">优先改善导航、审批、诊断、无障碍、中文化和恢复体验；在这些基础稳定后，再评估 Git、语义搜索、远程运行时或多智能体等更大能力。</p></div></div>
+        <div class="callout">下一阶段应先明确目标用户与分发方式，再决定安装包、运行时捆绑和配置迁移方案。任何复用机制都必须保持 SecretStorage 的凭据所有权与修改前准确审阅。</div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <div>生成日期：2026-08-25 · 状态：P2 已完成并通过用户验收。</div>
+      <div>详细资料：<a href="README.zh.md">阶段总结</a> · <a href="development-handoff.zh.md">开发接续</a> · <a href="p2-plan.zh.md">P2 计划</a> · <a href="p2-acceptance.zh.md">验收教程</a></div>
+    </footer>
+  </main>
+</body>
+</html>

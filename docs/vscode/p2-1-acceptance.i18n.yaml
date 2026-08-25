@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/vscode/p2-1-acceptance.md
-p2-1-acceptance.md: 75f1e6495db7eed870d00665a3b6e0f5fe715b3b
-p2-1-acceptance.zh.md: dca5f4541bfc901f408534a194fcc40c023d1422
+p2-1-acceptance.md: 8acb0c202510605604164939f5e0728846b9ba32
+p2-1-acceptance.zh.md: 5150ebb68ad95d93f74928e6647adb8d7f134c8a

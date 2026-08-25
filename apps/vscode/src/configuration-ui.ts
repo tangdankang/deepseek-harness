@@ -18,44 +18,44 @@ interface PermissionQuickPick extends vscode.QuickPickItem {
  */
 export async function collectModelProviderDraft(): Promise<ModelProviderDraft | undefined> {
   const provider = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (1/6)',
-    prompt: 'Provider route used inside DSH',
+    title: '配置 OpenAI 兼容模型（1/6）',
+    prompt: 'DSH 内部使用的提供方标识',
     value: 'custom-openai',
     placeHolder: 'company-gateway',
     ignoreFocusOut: true,
   })
   if (provider === undefined) return undefined
   const displayName = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (2/6)',
-    prompt: 'Provider name shown in model selectors',
+    title: '配置 OpenAI 兼容模型（2/6）',
+    prompt: '模型选择器中显示的提供方名称',
     value: provider.trim(),
     ignoreFocusOut: true,
   })
   if (displayName === undefined) return undefined
   const baseURL = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (3/6)',
-    prompt: 'API base URL, usually ending in /v1',
+    title: '配置 OpenAI 兼容模型（3/6）',
+    prompt: 'API 基础地址，通常以 /v1 结尾',
     placeHolder: 'https://gateway.example/v1',
     ignoreFocusOut: true,
   })
   if (baseURL === undefined) return undefined
   const model = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (4/6)',
-    prompt: 'Model ID accepted by the endpoint',
+    title: '配置 OpenAI 兼容模型（4/6）',
+    prompt: '接口接受的模型 ID',
     placeHolder: 'model-id',
     ignoreFocusOut: true,
   })
   if (model === undefined) return undefined
   const modelDisplayName = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (5/6)',
-    prompt: 'Model name shown in selectors',
+    title: '配置 OpenAI 兼容模型（5/6）',
+    prompt: '模型选择器中显示的模型名称',
     value: model.trim(),
     ignoreFocusOut: true,
   })
   if (modelDisplayName === undefined) return undefined
   const apiKey = await vscode.window.showInputBox({
-    title: 'Configure OpenAI-compatible model (6/6)',
-    prompt: 'API key stored in VS Code SecretStorage',
+    title: '配置 OpenAI 兼容模型（6/6）',
+    prompt: 'API 密钥将保存到 VS Code 的加密存储中',
     password: true,
     ignoreFocusOut: true,
   })
@@ -77,8 +77,8 @@ export async function collectDefaultPermission(): Promise<PermissionMode | undef
   const selected = await vscode.window.showQuickPick<PermissionQuickPick>(
     items,
     {
-      title: 'DSH default permission for new sessions',
-      placeHolder: 'Choose how future sessions may change the workspace',
+      title: '设置 DSH 新对话的默认权限',
+      placeHolder: '选择以后新对话可以怎样修改工作区',
       ignoreFocusOut: true,
     },
   )

@@ -30,6 +30,7 @@ import {
   HostStdioSubscriptionId,
   type HostStdioEventNotification,
   type HostStdioInitializeResult,
+  type HostStdioStreamEndNotification,
   type HostStdioStream,
   type HostStdioSubscribeResult,
 } from './protocol.ts'
@@ -47,11 +48,17 @@ const subscribeSchema = z.discriminatedUnion('stream', [
   z.object({ stream: z.literal('host'), payload: z.object({}).strict().default({}) }).strict(),
 ])
 const unsubscribeSchema = z.object({ subscriptionId: z.string().min(1) }).strict()
+const cancelSchema = z.object({ rpcId: z.string() }).strict()
 const emptyParamsSchema = z.object({}).strict()
 
 interface Subscription {
   controller: AbortController
   task: Promise<void>
+}
+
+interface InFlightRequest {
+  controller: AbortController
+  task: Promise<ServerResponse>
 }
 
 /**
@@ -62,6 +69,7 @@ export class HostApiStdioServer {
   private initialized = false
   private closing = false
   private readonly subscriptions = new Map<HostStdioSubscriptionId, Subscription>()
+  private readonly requests = new Map<RpcId, InFlightRequest>()
 
   /**
    * @param api - transport-independent Host API implementation.
@@ -101,14 +109,33 @@ export class HostApiStdioServer {
     }
   }
 
+  /**
+   * Handle one carrier notification. Unknown notifications fail loud while
+   * cancellation of an already-settled request is an accepted no-op.
+   * @param method - JSON-RPC notification method.
+   * @param params - normalized object parameters.
+   */
+  handleNotification(method: string, params: Record<string, unknown>): void {
+    if (method !== HOST_STDIO_METHODS.cancel) {
+      throw new Error(`unknown Host API stdio notification: ${method}`)
+    }
+    const { rpcId } = cancelSchema.parse(params)
+    this.requests.get(RpcId(rpcId))?.controller.abort(new Error('Host API stdio request cancelled'))
+  }
+
   /** Stop accepting work, cancel every stream, and await stream quiescence. */
   async shutdown(): Promise<void> {
     if (this.closing) return
     this.closing = true
     const subscriptions = [...this.subscriptions.values()]
+    const requests = [...this.requests.values()]
     this.subscriptions.clear()
     for (const subscription of subscriptions) subscription.controller.abort(new Error('Host API stdio server stopped'))
-    await Promise.allSettled(subscriptions.map(subscription => subscription.task))
+    for (const request of requests) request.controller.abort(new Error('Host API stdio server stopped'))
+    await Promise.allSettled([
+      ...subscriptions.map(subscription => subscription.task),
+      ...requests.map(request => request.task),
+    ])
   }
 
   private initialize(params: Record<string, unknown>): HostStdioInitializeResult {
@@ -121,9 +148,17 @@ export class HostApiStdioServer {
     }
   }
 
-  private request(params: Record<string, unknown>): Promise<ServerResponse> {
+  private async request(params: Record<string, unknown>): Promise<ServerResponse> {
     const message = clientRequestSchema.parse(params)
-    return dispatchClientRequest(this.api, message, new AbortController().signal)
+    if (this.requests.has(message.rpcId)) throw new Error(`Host API request ${message.rpcId} is already pending`)
+    const controller = new AbortController()
+    const task = dispatchClientRequest(this.api, message, controller.signal)
+    this.requests.set(message.rpcId, { controller, task })
+    try {
+      return await task
+    } finally {
+      this.requests.delete(message.rpcId)
+    }
   }
 
   private respond(params: Record<string, unknown>): Promise<RpcReceipt> {
@@ -147,7 +182,8 @@ export class HostApiStdioServer {
       : this.api.events.host({ rpcId: RpcId(randomUUID()), payload: parsed.payload }, controller.signal)
     const subscription: Subscription = { controller, task: Promise.resolve() }
     this.subscriptions.set(subscriptionId, subscription)
-    subscription.task = this.pump(subscriptionId, parsed.stream, frames, controller.signal)
+    subscription.task = new Promise<void>((resolve) => { setImmediate(resolve) })
+      .then(() => this.pump(subscriptionId, parsed.stream, frames, controller.signal))
     return { subscriptionId }
   }
 
@@ -196,6 +232,7 @@ export class HostApiStdioServer {
       }
     } finally {
       this.subscriptions.delete(subscriptionId)
+      this.notifyStreamEnd(subscriptionId, stream, signal.aborted ? 'cancelled' : 'completed')
     }
   }
 
@@ -207,6 +244,20 @@ export class HostApiStdioServer {
     const notification: HostStdioEventNotification = { subscriptionId, stream, message }
     this.peer.notify(HOST_STDIO_METHODS.event, notification)
   }
+
+  private notifyStreamEnd(
+    subscriptionId: HostStdioSubscriptionId,
+    stream: HostStdioStream,
+    reason: HostStdioStreamEndNotification['reason'],
+  ): void {
+    const notification: HostStdioStreamEndNotification = { subscriptionId, stream, reason }
+    try {
+      this.peer.notify(HOST_STDIO_METHODS.streamEnd, notification)
+    } catch {
+      // The iterator is already settled; a failed output has no remaining
+      // peer that could consume another diagnostic.
+    }
+  }
 }
 
 /** Cordis plugin name. */
@@ -215,6 +266,7 @@ export const name = 'host-apiproxy-stdio'
 /** Services required before the carrier can reserve process stdio. */
 export const inject = ['apiProxy', 'appExit']
 
+/* v8 ignore start -- process stdio and Cordis disposal are covered by the built-profile smoke */
 /**
  * Reserve process stdio for the Host API carrier. Protocol shutdown and input
  * closure both stop subscriptions before requesting bounded launcher exit.
@@ -233,7 +285,8 @@ export function apply(ctx: Context): void {
 
   const requestExit = (): Promise<void> => {
     exitTask ??= (async () => {
-      await Promise.allSettled([transport.flush(), server.shutdown()])
+      await server.shutdown()
+      await transport.flush().catch(() => undefined)
       appExit(0)
     })()
     return exitTask
@@ -243,6 +296,14 @@ export function apply(ctx: Context): void {
     const result = await server.handleRequest(method, params)
     if (method === HOST_STDIO_METHODS.shutdown) setImmediate(() => { void requestExit() })
     return result
+  })
+  transport.onNotification((method, params) => {
+    try {
+      server.handleNotification(method, params)
+    } catch {
+      // JSON-RPC notifications have no response channel; malformed peer
+      // cancellation cannot be reported without corrupting protocol stdout.
+    }
   })
 
   const onInputEnd = (): void => { void requestExit() }
@@ -259,3 +320,4 @@ export function apply(ctx: Context): void {
     }
   }, 'host-apiproxy-stdio.serve')
 }
+/* v8 ignore stop */

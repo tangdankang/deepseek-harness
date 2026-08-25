@@ -1,0 +1,186 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`assembled P2 conversation flow > records context and Skill text, rejection, one-shot approval, tool lifecycle, and recovery 1`] = `
+{
+  "afterAllow": {
+    "approvals": [],
+    "contextCount": 0,
+    "model": "fixture/fixture-model",
+    "permission": "confirm-changes",
+    "session": [
+      {
+        "running": false,
+        "title": "Fixture coding session",
+      },
+    ],
+    "skills": [
+      "fixture-skill",
+    ],
+    "transcript": [
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "user",
+        "text": "/fixture-skill
+
+<dsh-context source="selection" path="value.txt" lines="1-1">
+alpha
+</dsh-context>
+
+<user-task>
+Replace alpha with beta
+</user-task>",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "I found the requested change.",
+      },
+      {
+        "card": "diff",
+        "detail": "Edit rejected by user",
+        "kind": "tool",
+        "name": "edit",
+        "status": "failed",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "The reviewed change was not applied.",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "user",
+        "text": "<user-task>
+Try the same reviewed edit again
+</user-task>",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "I found the requested change.",
+      },
+      {
+        "card": "diff",
+        "detail": "1 applied change",
+        "kind": "tool",
+        "name": "edit",
+        "status": "completed",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "The reviewed change was applied.",
+      },
+    ],
+  },
+  "afterReject": {
+    "approvals": [],
+    "contextCount": 0,
+    "model": "fixture/fixture-model",
+    "permission": "confirm-changes",
+    "session": [
+      {
+        "running": false,
+        "title": "Fixture coding session",
+      },
+    ],
+    "skills": [
+      "fixture-skill",
+    ],
+    "transcript": [
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "user",
+        "text": "/fixture-skill
+
+<dsh-context source="selection" path="value.txt" lines="1-1">
+alpha
+</dsh-context>
+
+<user-task>
+Replace alpha with beta
+</user-task>",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "I found the requested change.",
+      },
+      {
+        "card": "diff",
+        "detail": "Edit rejected by user",
+        "kind": "tool",
+        "name": "edit",
+        "status": "failed",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "The reviewed change was not applied.",
+      },
+    ],
+  },
+  "beforeReject": {
+    "approvals": [
+      {
+        "allowEnabled": true,
+        "detail": "value.txt",
+        "kind": "diff",
+        "toolName": "edit",
+      },
+    ],
+    "contextCount": 0,
+    "model": "fixture/fixture-model",
+    "permission": "confirm-changes",
+    "session": [
+      {
+        "running": false,
+        "title": "Fixture coding session",
+      },
+    ],
+    "skills": [
+      "fixture-skill",
+    ],
+    "transcript": [
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "user",
+        "text": "/fixture-skill
+
+<dsh-context source="selection" path="value.txt" lines="1-1">
+alpha
+</dsh-context>
+
+<user-task>
+Replace alpha with beta
+</user-task>",
+      },
+      {
+        "kind": "message",
+        "reasoning": false,
+        "role": "assistant",
+        "text": "I found the requested change.",
+      },
+      {
+        "card": "diff",
+        "detail": undefined,
+        "kind": "tool",
+        "name": "edit",
+        "status": "running",
+      },
+    ],
+  },
+  "file": "beta
+",
+}
+`;

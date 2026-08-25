@@ -314,11 +314,11 @@ export interface SessionsApi {
 
   /**
    * Sends a message. content is core's ContentBlock[] verbatim; mode maps 1:1 — queue→send, steer→steer.
-   * A prompt whose content is exactly one text block starting with '/' is a slash command: the host
-   * executes it through the command registry (mode-agnostic) and it is never sent to the model. A
-   * successful command returns ok with the command slot (its success text, when the command produced
-   * one — carried for future rendering; the state change is the feedback). A usage/state error is an
-   * RPC error with code command-error; an unrecognized name is an RPC error with code unknown-command.
+   * A prompt whose content is exactly one text block starting with '/' first resolves through the
+   * command registry (mode-agnostic); a known command never enters a model turn. When no command
+   * matches, a user-invocable Skill name enters the ordinary prompt path for pre-step injection, while
+   * every other name returns unknown-command. A successful command returns ok with its result slot;
+   * a command usage or state error returns command-error.
    */
   /**
    * Forks a new session from a completed-turn prefix of the source. `atSeq`
@@ -349,7 +349,7 @@ export interface SessionsApi {
     mode: 'queue' | 'steer'
     content: PromptContentPart[]
     clientTimeZone?: string
-  }>):
+  }>, signal?: AbortSignal):
   Promise<RpcResponse<{ accepted: true; command?: { kind: 'success'; text?: string } }>>
 
   /** Reads one durable image after proving that this session's log references its id. */

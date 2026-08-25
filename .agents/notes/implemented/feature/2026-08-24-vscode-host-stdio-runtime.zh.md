@@ -12,7 +12,9 @@ VS Code workspace 扩展需要一个长驻 DSH 进程，并在编辑器中明确
 
 **Extension Host 持有一个 DSH 子进程。** 它启动可配置的命令，默认执行 `dsh --profile vscode`，执行版本初始化、Host 就绪请求和 settings 就绪请求，并通过编辑器界面暴露 starting、connected、stopping、stopped 和 error 状态。每个就绪请求都有各自的配置时限。优雅停止会先请求协议关闭，再终止进程，dispose 使用同一路径。启动失败在终止对应子进程期间仍保留原错误状态；只有已连接进程的退出会成为意外退出错误。
 
-**专用 stdio 载体包装既有 Host API。** `dsh-host-apiproxy` 持有一个与载体无关、由编译器锁定的一元分发器。fetch handler 与 `dsh-host-apiproxy-stdio` 都先校验自身的物理信封，再调用这个分发器，因此 Host 方法与领域 schema 只有一份注册表。stdio 载体保留完整服务端请求，包括可回答的 `rpcId`，并持有订阅取消，而不改变 Host API 领域类型。
+**专用 stdio 载体包装既有 Host API。** `dsh-host-apiproxy` 持有与载体无关、由编译器锁定的请求分发与响应值校验。fetch handler、fetch client、`dsh-host-apiproxy-stdio` 与 VS Code 客户端复用这些 Host 方法和领域 schema，不定义载体局部副本。stdio 载体保留完整服务端请求，包括可回答的 `rpcId`；明确报告 mux/host 订阅结算；并把客户端取消映射到对应的执行中 Host 请求，而不改变 Host API 领域类型。
+
+**Extension Host 根据 Host 权威状态校准每个进程世代。** 它在读取会话历史前打开 mux 与 host 订阅，在等待尾页期间缓冲实时事件，根据会话事件序号消除重叠，并在订阅基线领先时重新拉取一次。回放的审批请求会替换进程局部的待处理交互状态。重启会建立新订阅，并重新读取每个已跟踪会话；进程退出或输入关闭会拒绝上一世代的一元请求与流等待者。
 
 **`vscode` profile 是最小 Host 组合。** `dsh-vscode-app` 在 `dsh-base` 之上叠加存储、Workspace、browse 目录支持、`ctx.apiProxy` 与 stdio 载体。它不挂载 HTTP、Web 或 stdout 日志配置行。普通 `web` 与 `headless` 模板仍是相互独立的组合。
 
@@ -28,4 +30,4 @@ VS Code workspace 扩展需要一个长驻 DSH 进程，并在编辑器中明确
 
 ## 后果
 
-无需调用模型或提供 secret，就可以激活扩展并验收其运行时生命周期。模型配置、对话、Diff 与审批阶段使用同一进程和 Host API，无需替换载体。载体协议独立于 Host 领域方法进行版本控制；重连会启动新的子进程，而不是重新连接既有进程。
+无需调用模型或提供 secret，就可以激活扩展并验收其运行时生命周期。模型配置、对话、Diff 与审批阶段使用同一进程、类型化请求路径、事件折叠和 Host API，无需替换载体。载体协议独立于 Host 领域方法进行版本控制；重连会启动新的子进程，并根据历史与实时流校准，而不是重新连接既有进程。

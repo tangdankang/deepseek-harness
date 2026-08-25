@@ -66,8 +66,7 @@ import type {} from '@deepseek-ai/dsh-session-projection-cache'
 // GoalError narrows domain rejections to their stable codes at the wire boundary.
 import { GoalError } from '@deepseek-ai/dsh-goal'
 import type { GoalRef as CoreGoalRef } from '@deepseek-ai/dsh-goal'
-// Type-only edges: resolve the command-change stream and `ctx.get('skills')`.
-import type {} from '@deepseek-ai/dsh-commands'
+import { parseCommand } from '@deepseek-ai/dsh-commands'
 // Type-only: the dynamic-package runner's forwarded-event declarations. Its
 // client-safe `./types` subpath deliberately, not the package root — the root
 // merges `ctx.dynamicCordisRunner`, and a dependency on that package would
@@ -1807,6 +1806,17 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
     return llm === undefined || llm.listProviders().some(entry => entry.id === provider)
   }
 
+  /** Return whether a command-shaped prompt names a user-invocable Skill in this Agent's composition. */
+  async function isSkillPrompt(agent: Agent, line: string, signal: AbortSignal): Promise<boolean> {
+    const parsed = parseCommand(line)
+    if (parsed === undefined) return false
+    const presets = ctx.get('agentPresets')
+    const skillRegistry = presets?.serviceFor(agent, 'skills') ?? ctx.get('skills')
+    if (skillRegistry === undefined) return false
+    const skills = await skillRegistry.list({ cwd: agent.session.header.cwd, signal, scope: agent })
+    return skills.some(skill => skill.name === parsed.name && isUserInvocable(skill))
+  }
+
   /**
    * Resolve the addressed agent for a turn-starting method and refuse when no
    * adapter serves its current selection: a provider nothing serves cannot start a
@@ -2398,7 +2408,7 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
         return ok(request, { sessionId: childId })
       },
 
-      async prompt(request) {
+      async prompt(request, signal) {
         const { sessionId, mode, content, clientTimeZone } = request.payload
         const canonicalTimeZone = clientTimeZone === undefined
           ? undefined
@@ -2409,6 +2419,59 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
             message: 'clientTimeZone must be UTC or a valid IANA Area/Location name',
             details: { value: clientTimeZone },
           })
+        }
+        const commandLine = content.length === 1 && content[0]?.type === 'text' && content[0].text.startsWith('/')
+          ? content[0].text
+          : undefined
+        if (commandLine !== undefined) {
+          const found = await agentFor(sessionId)
+          if ('error' in found) return err(request, found.error)
+          const commandSignal = signal ?? new AbortController().signal
+          let execution: Awaited<ReturnType<typeof ctx.commands.execute>>
+          try {
+            execution = await ctx.commands.execute(found.agent, commandLine, commandSignal)
+          } catch (error: unknown) {
+            if (commandSignal.aborted) {
+              return err(request, { code: 'cancelled', message: 'command execution was aborted', details: {} })
+            }
+            return err(request, {
+              code: 'command-error',
+              message: error instanceof Error ? error.message : String(error),
+              details: {},
+            })
+          }
+          if (execution !== undefined) {
+            if (execution.result.kind === 'error') {
+              return err(request, { code: 'command-error', message: execution.result.text, details: {} })
+            }
+            return ok(request, {
+              accepted: true as const,
+              command: {
+                kind: 'success' as const,
+                ...(execution.result.text === undefined ? {} : { text: execution.result.text }),
+              },
+            })
+          }
+          try {
+            const skillPrompt = await isSkillPrompt(found.agent, commandLine, commandSignal)
+            if (!skillPrompt) {
+              const parsed = parseCommand(commandLine)
+              return err(request, {
+                code: 'unknown-command',
+                message: parsed === undefined ? 'invalid slash command' : `unknown command "/${parsed.name}"`,
+                details: {},
+              })
+            }
+          } catch (error: unknown) {
+            if (commandSignal.aborted) {
+              return err(request, { code: 'cancelled', message: 'skill lookup was aborted', details: {} })
+            }
+            return err(request, {
+              code: 'internal',
+              message: `skill lookup failed: ${error instanceof Error ? error.message : String(error)}`,
+              details: {},
+            })
+          }
         }
         const resolved = await turnAgentFor<{ accepted: true }>(request, sessionId)
         if ('refused' in resolved) return resolved.refused
@@ -3144,16 +3207,25 @@ export function createApiProxy(ctx: Context, defaults: ApiProxyDefaults): ApiPro
 
     skills: {
       // Skill lookup never creates or resumes an agent: the session address
-      // resolves to a canonical cwd from the host-resident session header, and
+      // resolves to a canonical cwd from its attached or persisted header, and
       // the view scope is the live agent or the preset's standing key.
       async list(request) {
         const { sessionId } = request.payload
-        const session = ctx.sessions.get(sessionId)
-        if (session === undefined) {
+        let session: PresetBearingSession
+        try {
+          session = await readSessionState(sessionId)
+        } catch (error: unknown) {
+          if (error instanceof SessionNotFound) {
+            return err(request, {
+              code: 'session-not-found',
+              message: error.message,
+              details: { sessionId },
+            })
+          }
           return err(request, {
-            code: 'session-not-found',
-            message: `session "${sessionId}" not found (not attached)`,
-            details: { sessionId },
+            code: 'internal',
+            message: `skill session lookup failed: ${String(error)}`,
+            details: {},
           })
         }
         if (session.header.cwd === undefined) {

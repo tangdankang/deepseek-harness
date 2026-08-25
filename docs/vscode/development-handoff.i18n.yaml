@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write docs/vscode/development-handoff.md
-development-handoff.md: 2f0cbedf41ae440039306cd246d9c3efb74070ac
-development-handoff.zh.md: ebe84a891f5cf6d9b085de102a49c4b4de6e739c
+development-handoff.md: c96e094c56ff6218b5d89f77caa9ae994f6021fc
+development-handoff.zh.md: 9489f3347a36a982d6bdc4ff033ddf78145a81bc

@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { runtimeEnvironment } from '../src/environment.ts'
-import { RuntimeManager, type RuntimeLaunchConfig, type RuntimeLogger } from '../src/runtime-manager.ts'
+import { resolveRuntimeCwd, RuntimeManager, type RuntimeLaunchConfig, type RuntimeLogger } from '../src/runtime-manager.ts'
 
 class TestLogger implements RuntimeLogger {
   readonly lines: string[] = []
@@ -26,6 +26,12 @@ function launch(...args: string[]): RuntimeLaunchConfig {
 }
 
 describe('RuntimeManager', () => {
+  it('requires a project directory instead of launching from the VS Code installation', () => {
+    expect(resolveRuntimeCwd('C:\\configured', 'C:\\workspace')).toBe('C:\\configured')
+    expect(resolveRuntimeCwd('', 'C:\\workspace')).toBe('C:\\workspace')
+    expect(() => resolveRuntimeCwd('', undefined)).toThrow('尚未打开工作区文件夹')
+  })
+
   it('starts, handshakes, redacts stderr, and stops the owned process', async () => {
     const logger = new TestLogger()
     const manager = new RuntimeManager('0.1.0', logger)
@@ -102,6 +108,37 @@ describe('RuntimeManager', () => {
     await vi.waitFor(() => { expect(manager.state.kind).toBe('error') })
     if (manager.state.kind !== 'error') throw new Error('expected a visible runtime error')
     expect(manager.state.message).toContain('code 7')
+    await manager.stop(2_000)
+  }, 10_000)
+
+  it('turns an unexpected event-stream end into a visible connection error', async () => {
+    const logger = new TestLogger()
+    const manager = new RuntimeManager('0.1.0', logger)
+
+    await expect(manager.start(launch('--end-stream-after-handshake'))).rejects.toThrow('mux-1 ended')
+    if (manager.state.kind !== 'error') throw new Error('expected a visible runtime error')
+    expect(manager.state.message).toContain('did not become ready')
+    await manager.stop(2_000)
+  }, 10_000)
+
+  it('reopens both streams and reconciles tracked history after restart', async () => {
+    const logger = new TestLogger()
+    const manager = new RuntimeManager('0.1.0', logger)
+    const config = launch()
+    await manager.start(config)
+    await vi.waitFor(() => {
+      expect(manager.events.snapshot('fixture-session' as never).subscribedLastSeq).toBe(-1)
+    })
+    await manager.reconcileSession('fixture-session' as never)
+    expect(manager.events.snapshot('fixture-session' as never).reconciling).toBe(false)
+
+    await manager.restart(config)
+    await vi.waitFor(() => {
+      expect(manager.events.snapshot('fixture-session' as never)).toMatchObject({
+        subscribedLastSeq: -1,
+        reconciling: false,
+      })
+    })
     await manager.stop(2_000)
   }, 10_000)
 

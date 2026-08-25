@@ -6,9 +6,9 @@
 
 ## 协议
 
-客户端必须先且只调用一次 `dsh/initialize`，之后才能发送其他请求。`dsh/request` 携带完整形式的 Host API `ClientRequest`，`dsh/respond` 回答由 Host 发起的交互，`dsh/subscribe` 则打开 `mux` 或 `host` 事件流。事件流帧以 `dsh/event` 通知抵达，其中包含载体生成的订阅 id 和服务端原始的可回答 `rpcId`。`dsh/unsubscribe` 会取消并结算一个流。协议词汇从 `@deepseek-ai/dsh-host-apiproxy-stdio/protocol` 导出，不会导入 Node 运行时模块。
+客户端必须先且只调用一次 `dsh/initialize`，之后才能发送其他请求。`dsh/request` 携带完整形式的 Host API `ClientRequest`；客户端取消请求时，会尽力使用该请求的 Host `rpcId` 发送 `dsh/cancel`。`dsh/respond` 回答由 Host 发起的交互，`dsh/subscribe` 则打开 `mux` 或 `host` 事件流。事件流帧以 `dsh/event` 通知抵达，其中包含载体生成的订阅 id 和服务端原始的可回答 `rpcId`；每个迭代器结算时只发送一次 `dsh/streamEnd` 通知。`dsh/unsubscribe` 会取消并等待一个流。协议词汇从 `@deepseek-ai/dsh-host-apiproxy-stdio/protocol` 导出，不会导入 Node 运行时模块。
 
-`dsh/shutdown`、stdin 关闭和 stdin 故障都会取消活动流，在待处理协议输出完成 flush 后请求启动器退出。插件 dispose 时会取消并等待相同的流任务，再关闭传输。Host API 载荷会经过与 fetch 载体相同的、由编译器锁定的分发器和领域 schema；实现故障仍属于载体故障，不会伪装成业务错误响应。
+`dsh/shutdown`、stdin 关闭和 stdin 故障都会取消活动流与执行中的请求，等待它们结算，flush 待处理协议输出，再请求启动器退出。插件 dispose 时会在关闭传输前达到相同的完全停稳状态。Host API 载荷会经过与 fetch 载体相同的、由编译器锁定的分发器和领域 schema；实现故障仍属于载体故障，不会伪装成业务错误响应。
 
 ## 模型体验
 

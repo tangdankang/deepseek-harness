@@ -34,4 +34,4 @@ Focused tests cover provider and URL validation, SecretStorage isolation, revisi
 
 ## Consequences
 
-Model onboarding is available before the conversation UI, but it does not run a model turn. The wizard configures one OpenAI-compatible route at a time; other adapter protocols remain available through DSH settings outside this surface. A provider change restarts the owned runtime, and a default-permission change affects only sessions created afterward. Per-session switching and one-shot approval controls remain owned by later P2 work packages.
+The wizard configures one OpenAI-compatible route at a time and does not run a model turn; other adapter protocols remain available through DSH settings outside this surface. A provider change restarts the owned runtime, and a default-permission change affects only sessions created afterward. The conversation controller separately owns active-session model and permission selection plus one-shot approvals.

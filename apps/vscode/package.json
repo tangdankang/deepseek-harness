@@ -23,11 +23,12 @@
     "@deepseek-ai/dsh-host-apiproxy": "workspace:^",
     "@deepseek-ai/dsh-host-apiproxy-stdio": "workspace:^",
     "@deepseek-ai/dsh-sdk-protocol": "workspace:^",
-    "cross-spawn": "^7.0.6"
+    "cross-spawn": "^7.0.6",
+    "micromark": "^4.0.2"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
-    "@types/vscode": "^1.100.0",
+    "@types/vscode": "^1.106.0",
     "esbuild": "^0.25.0"
   }
 }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DeepSeek Harness VS Code：P0–P1 阶段总结与 P2 计划</title>
+  <title>DeepSeek Harness VS Code：P0–P2 阶段总结</title>
   <style>
     :root {
       color-scheme: dark;
@@ -109,7 +109,7 @@
     <header class="hero">
       <div class="eyebrow">DeepSeek Harness · VS Code Project</div>
       <h1>P0–P2.1 阶段总结<br>与 P2 最小可用开发闭环</h1>
-      <p class="lead">P1 与 P2.1 均已于 2026-08-24 通过用户验收，完整 P2 计划与 D1–D7 已获批准。P2.2 尚未开始。</p>
+      <p class="lead">P1 与 P2.1 已于 2026-08-24 通过用户验收，完整 P2.2–P2.7 编码闭环已于 2026-08-25 通过整体验收。后续汇报与复用路线请查看 P2 完成报告。</p>
       <div class="badges">
         <span class="badge ok">P0 完成</span>
         <span class="badge ok">P1 已验收</span>
@@ -185,7 +185,7 @@
 
     <section id="p2" class="grid" style="margin-top:16px">
       <article class="card wide">
-        <div class="eyebrow">Approved Plan · P2.1 Accepted · P2.2 Not Started</div>
+        <div class="eyebrow">Implemented Plan · P2 Accepted</div>
         <h2>P2 目标：最小可用开发闭环</h2>
         <p>P2 让用户在 VS Code 中完成“提出需求 → 添加上下文或 Skill → DSH 分析和读取 → 预览文件 Diff 或终端命令 → 允许或拒绝 → 查看执行结果 → 重启后恢复会话”的完整闭环。</p>
       </article>
@@ -240,7 +240,7 @@
         <div class="decision"><div class="decision-id">D5</div><div><strong>Skill 范围：建议项目级和用户级</strong>支持发现、列表、斜杠调用、热刷新，以及不会覆盖已有文件的基础创建命令。</div></div>
         <div class="decision"><div class="decision-id">D6</div><div><strong>审批展示：文件显示准确 Diff，终端显示准确命令</strong>终端命令可能产生无法预先枚举的副作用，界面必须明确提示这一差异。</div></div>
         <div class="decision"><div class="decision-id">D7</div><div><strong>完成证据：建议三层验收</strong>无密钥快照 + 真实 Extension Host + 一次真实提供方定向测试，并由用户执行下方 11 步中文流程。</div></div>
-        <div class="note">D1–D7 已全部批准。停止条件仍然有效：每个工作包完成后先返回阶段结果，等待用户验收，再进入下一个工作包。P2.2 仅在用户明确要求后开始。</div>
+        <div class="note">D1–D7 已全部批准、实现并通过整体验收。后续工作转向稳定性、分发和他人复用，详见 P2 完成报告。</div>
       </article>
     </section>
 
@@ -275,8 +275,8 @@
     </section>
 
     <footer class="footer">
-      <div>生成日期：2026-08-24 · 当前状态：P2.1 已验收，P2.2 尚未开始。</div>
-      <div>详细 Markdown：<a href="README.zh.md">阶段总结</a> · <a href="development-handoff.zh.md">开发接续</a> · <a href="p2-plan.zh.md">P2 计划</a> · <a href="p2-1-acceptance.zh.md">P2.1 验收</a></div>
+      <div>更新日期：2026-08-25 · 当前状态：P2 已完成并通过用户验收。</div>
+      <div>最新材料：<a href="p2-completion-and-reuse-report.html">P2 完成与复用汇报</a> · <a href="README.zh.md">阶段总结</a> · <a href="development-handoff.zh.md">开发接续</a> · <a href="p2-plan.zh.md">P2 计划</a></div>
     </footer>
   </main>
 </body>

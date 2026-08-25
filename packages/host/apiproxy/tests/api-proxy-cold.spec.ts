@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import SessionStore from '@deepseek-ai/dsh-session'
 import AgentRegistry from '@deepseek-ai/dsh-agent'
+import SkillRegistry from '@deepseek-ai/dsh-skill'
 import { TypertLookupFailure } from '@deepseek-ai/dsh-typert-protocol'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
 import { createUserMessage, MessageId } from '@deepseek-ai/dsh-llm'
@@ -211,6 +212,42 @@ describe('sessions.list cold merge', () => {
         updatedAt: 300,
       }),
     ])
+  })
+})
+
+describe('skills.list cold session', () => {
+  it('reads the persisted session without attaching an Agent', async () => {
+    const ctx = new Context()
+    await ctx.plugin(SessionStore)
+    await ctx.plugin(UserQuestionService)
+    await ctx.plugin(AgentRegistry)
+    await ctx.plugin(SkillRegistry)
+    const meta = header('cold-skill-session', 100)
+    const inspect = vi.fn(() => Promise.resolve({ meta, events: [] as SessionEvent[] }))
+    ctx.provide('sessionPersistence', {
+      list: () => Promise.resolve([meta]),
+      inspect,
+    } as never)
+    ctx.skills.register({
+      name: 'acceptance-helper',
+      description: 'Assist with acceptance checks.',
+      source: 'runtime',
+      content: 'Begin with SKILL_OK.',
+    })
+    const api = createApiProxy(ctx, {
+      defaultModelSelection: () => ({ provider: 'p', model: 'm' }),
+      cwd: '/tmp',
+    })
+
+    const response = await api.skills.list(request({ sessionId: meta.id }))
+    expect(response.result).toMatchObject({
+      ok: true,
+      value: { skills: [expect.objectContaining({ name: 'acceptance-helper' })] },
+    })
+    expect(inspect).toHaveBeenCalledWith(meta.id)
+    expect(ctx.sessions.get(meta.id)).toBeUndefined()
+    expect(ctx.agents.get(meta.id)).toBeUndefined()
+    await ctx.fiber.dispose()
   })
 })
 

@@ -21,7 +21,22 @@ pnpm --filter @deepseek-ai/dsh-vscode run build
 code --extensionDevelopmentPath="E:\E_AI\DSH\deepseek-harness-myPcVs\apps\vscode\extension" "E:\E_AI\DSH\deepseek-harness-myPcVs"
 ```
 
-在新打开的 Extension Development Host 中，从活动栏打开 **DeepSeek Harness**，然后选择 **Start**。运行时必须显示已连接，并且不能出现错误通知。
+在新打开的 Extension Development Host 中，从活动栏打开 **DeepSeek Harness**，然后选择 **Start**。按 `Ctrl+Shift+P`，执行“首选项: 打开用户设置(JSON)”，并在 JSON 对象中加入以下配置：
+
+```json
+{
+  "dsh.runtime.command": "C:\\Program Files\\nodejs\\node.exe",
+  "dsh.runtime.args": [
+    "E:\\E_AI\\DSH\\deepseek-harness-myPcVs\\apps\\cli\\lib\\bin.js",
+    "--profile",
+    "vscode"
+  ],
+  "dsh.runtime.cwd": "E:\\E_AI\\DSH\\deepseek-harness-myPcVs",
+  "dsh.runtime.startOnOpen": false
+}
+```
+
+运行时必须显示已连接，并且不能出现错误通知。
 
 ## 2. 配置模型
 

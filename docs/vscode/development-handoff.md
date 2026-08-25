@@ -1,77 +1,90 @@
-# VS Code Development Handoff: After P2.1
+# VS Code Development Handoff: Post-P2 Improvement and Reuse
 
 English | [中文](development-handoff.zh.md)
 
-This reference lets a new coding agent continue the DeepSeek Harness VS Code project without the prior conversation. It records the accepted state, user collaboration rules, code entry points, environment constraints, and the next work package. Read this document and its linked owners before changing code.
+This reference lets a new coding agent continue the DeepSeek Harness VS Code project without prior conversation. Read it and its linked authorities before changing the implementation.
 
 ## Handoff Status
 
 - Repository: `E:\E_AI\DSH\deepseek-harness-myPcVs`, branch `master`.
-- The commit containing this document is the P0–P2.1 checkpoint. P1, P2.0, and P2.1 passed user acceptance on 2026-08-24; P2.2 has not started.
-- Inspect `git status --short` before work. Preserve any later user changes and never reset, discard, or overwrite them to recreate this checkpoint.
-- Node `v24.19.0`, pnpm `11.7.0`, and VS Code `1.134.0` are installed on Windows. The extension build output is ignored and must be rebuilt before launching an Extension Development Host.
+- P0–P2.7 are implemented and accepted. P1, P2.0, and P2.1 passed user acceptance on 2026-08-24; the complete P2 coding loop passed integrated acceptance on 2026-08-25.
+- Inspect `git status --short` before work. Preserve user changes and never reconstruct this checkpoint by resetting, discarding, or overwriting them.
+- Windows has Node `v24.19.0`, pnpm `11.7.0`, and VS Code `1.134.0`. Rebuild ignored extension artifacts before starting an Extension Development Host.
 
 ## Required Collaboration Rules
 
-- Work on one approved P2 work package at a time. Report a stage result and wait for explicit user acceptance before starting the next package.
-- When an ambiguity would materially change behavior, security, scope, or user experience, state it and wait for the user instead of choosing silently.
-- Give acceptance procedures and stage reports in Chinese. Do not advance from P2.2 to P2.3 during the same implementation turn.
-- Use focused verification for the changed behavior. The accepted repository baseline remains 12,877 passed, 59 skipped, and 36 failed tests: 32 Windows symlink `EPERM` cases and 4 full-suite timeouts. Do not turn removal of that baseline into P2.2 work.
-- If focused P2.2 verification proves that a local development dependency is missing, the user permits a safe in-scope installation. Report any dependency that cannot be installed safely or automatically.
+- Treat the accepted P2 behavior as the product baseline. New work needs an explicit problem statement, bounded scope, migration decision, and acceptance checkpoint.
+- Prioritize product improvement and reuse by other people; do not widen a local usability request into an unrelated repository cleanup.
+- Give acceptance procedures and stage reports in Chinese.
+- Use focused verification for changed behavior. The accepted repository baseline remains 12,877 passed, 59 skipped, and 36 failed tests: 32 Windows symlink `EPERM` cases and 4 full-suite timeouts. Do not broaden P2 into repairing that baseline.
+- Report any environment-owned step that cannot be completed safely. A real provider task requires a rotated credential supplied through VS Code SecretStorage; deterministic assembled-flow tests must remain keyless.
 
 ## Sources of Truth
 
-| Document | What it owns |
+| Document | Ownership |
 | --- | --- |
-| [Stage summary](README.md) | Accepted P0–P2.1 product state, verification baseline, security state, and known limits. |
-| [Approved P2 plan](p2-plan.md) | D1–D7, scope, work-package order, acceptance boundaries, and the complete manual P2 flow. |
-| [VS Code extension README](../../apps/vscode/README.md) | Extension commands, runtime configuration, process and secret ownership, build path, and focused checks. |
-| [Architecture](../architecture.md) | Repository composition and extension points that must be read before changing `packages/`. |
-| [Defensive patterns](../defensive-patterns.md) | Lifecycle, concurrency, subprocess, cancellation, and teardown rules required for P2.2. |
-| [Host stdio runtime decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md) | Process ownership, carrier choice, profile composition, credential admission, and startup failure precedence. |
-| [Model and permission onboarding decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-model-permission-onboarding.md) | SecretStorage ownership, settings writes, rollback, permission choices, and restart behavior. |
+| [Stage summary](README.md) | P0–P2 product state, security posture, and known limits. |
+| [P2 completion and reuse report](p2-completion-and-reuse-report.html) | Shareable executive summary, delivered capabilities, evidence, and post-P2 roadmap. |
+| [Approved P2 plan](p2-plan.md) | D1–D7, scope, design, work packages, and acceptance boundary. |
+| [P2 acceptance tutorial](p2-acceptance.md) | Ordered manual verification of the complete coding loop. |
+| [VS Code extension README](../../apps/vscode/README.md) | Commands, configuration, process and secret ownership, and focused checks. |
+| [Architecture](../architecture.md) | Repository composition and extension points required before changing `packages/`. |
+| [Defensive patterns](../defensive-patterns.md) | Lifecycle, concurrency, subprocess, cancellation, and teardown rules. |
+| [Host stdio runtime decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-host-stdio-runtime.md) | Process ownership, carrier, profile composition, credential admission, and startup diagnostics. |
+| [Model and permission onboarding decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-model-permission-onboarding.md) | SecretStorage ownership, settings writes, rollback, permissions, and restart behavior. |
+| [P2 coding-loop decision](../../.agents/notes/implemented/feature/2026-08-24-vscode-p2-coding-loop.md) | Conversation projection, context persistence, Skill roots, and approval restrictions. |
 
-Repository and subtree `AGENTS.md` files remain mandatory. Documentation changes use bilingual pairs and re-record their `.i18n.yaml` files.
+Repository and subtree `AGENTS.md` files remain mandatory. Documentation changes update both languages and re-record each `.i18n.yaml` pair.
 
 ## Delivered Baseline
 
-P0 and P1 add the VS Code workspace extension, the `vscode` profile, a newline-delimited JSON-RPC Host carrier over stdio, transport-independent Host dispatch, one owned child-process lifecycle, visible connection state, redacted diagnostics, and graceful shutdown. P2.1 adds OpenAI-compatible provider onboarding, VS Code SecretStorage key ownership, generated credential references, Host settings mutations, and the three approved future-session permission defaults.
+The extension owns one local `dsh --profile vscode` process and a typed newline-delimited JSON-RPC client. It establishes mux and host streams before history reconciliation, rejects pending work on disconnect, repairs tracked session tails after restart, and keeps provider credentials in VS Code SecretStorage.
 
-The runtime gives protocol initialization, Host description, and settings description independent startup deadlines. A failed startup retains its first diagnostic while cleanup terminates the child; only an exit after connection becomes an unexpected-exit error. Preserve both behaviors when extending subscriptions and reconnect handling.
+The Webview presents ordinary sessions, cold-history restoration and pagination, streaming assistant Markdown, reasoning status without private reasoning text, Host-authored tool cards, cancellation, model selection, and the active permission projection. The Extension Host is the only process and credential owner; the Webview receives a validated serializable view model.
 
-The extension does not yet provide conversation UI, session history, live mux event consumption, editor context, Skill UI, Diff review, or per-operation approval. Model onboarding alone does not authorize a coding task through the extension.
+Context tags capture a selection, current or Explorer file, Explorer folder listing, or workspace listing under explicit byte and file limits. Exact rendered sections enter `session.prompt` and therefore the durable user message. Project and user Skills use the existing filesystem provider roots, slash completion, explicit invocation, filesystem refresh, and non-overwriting skeleton creation.
+
+File approvals support exact pre-execution Diff previews for `write` and targeted `edit`, reject stale previews, and send one response for the original approval request. Shell approvals display the exact command, working directory, reason, and the inability to predict every filesystem effect. The `vscode` profile disables modifying tool paths that cannot provide the same top-level review metadata; Code Mode is absent.
 
 ## Code Entry Points
 
-| Path | Current responsibility and P2.2 relevance |
+| Path | Responsibility |
 | --- | --- |
-| [`apps/vscode/src/host-client.ts`](../../apps/vscode/src/host-client.ts) | Client-side JSON-RPC framing, initialization, typed Host requests, and pending request ownership; primary P2.2 client entry point. |
-| [`apps/vscode/src/runtime-manager.ts`](../../apps/vscode/src/runtime-manager.ts) | Child lifecycle, startup readiness, settings access, stop/restart, exit observation, and visible error precedence. |
-| [`apps/vscode/src/extension.ts`](../../apps/vscode/src/extension.ts) | VS Code activation, commands, SecretStorage wiring, runtime configuration, and disposal. |
-| [`apps/vscode/src/view.ts`](../../apps/vscode/src/view.ts) | Current connection/configuration Tree View; P2.2 must not prematurely implement the P2.3 conversation Webview. |
-| [`packages/host/apiproxy-stdio/src/protocol.ts`](../../packages/host/apiproxy-stdio/src/protocol.ts) | Versioned physical stdio messages and validation. |
-| [`packages/host/apiproxy-stdio/src/index.ts`](../../packages/host/apiproxy-stdio/src/index.ts) | Server-side stdio request, subscription, response, and shutdown ownership. |
-| [`packages/host/apiproxy/src/dispatch.ts`](../../packages/host/apiproxy/src/dispatch.ts) | Carrier-independent Host API unary dispatch shared with the fetch carrier. |
-| [`packages/bundle/vscode-app`](../../packages/bundle/vscode-app/README.md) | Assembled long-lived Host profile and its allowed permission presets. |
+| [`apps/vscode/src/host-client.ts`](../../apps/vscode/src/host-client.ts) | Framing, typed Host requests, streams, cancellation, and pending request ownership. |
+| [`apps/vscode/src/event-fold.ts`](../../apps/vscode/src/event-fold.ts) | History/live reconciliation, projections, transient state, and pending interactions. |
+| [`apps/vscode/src/runtime-manager.ts`](../../apps/vscode/src/runtime-manager.ts) | Child-process lifecycle, startup, configuration, stop/restart, and reconnect repair. |
+| [`apps/vscode/src/conversation.ts`](../../apps/vscode/src/conversation.ts) | Sessions, history, prompts, models, permissions, Skills, context, and approvals. |
+| [`apps/vscode/src/conversation-model.ts`](../../apps/vscode/src/conversation-model.ts) | Pure transcript and Host render-intent projection. |
+| [`apps/vscode/src/context.ts`](../../apps/vscode/src/context.ts) | Bounded context capture and deterministic durable prompt rendering. |
+| [`apps/vscode/src/skills.ts`](../../apps/vscode/src/skills.ts) | Approved Skill roots, watchers, and safe skeleton creation. |
+| [`apps/vscode/src/approvals.ts`](../../apps/vscode/src/approvals.ts) | Native Diff documents, exact edit simulation, stale checks, and one-shot responses. |
+| [`apps/vscode/src/view.ts`](../../apps/vscode/src/view.ts) | CSP Webview renderer and validated action decoding. |
+| [`packages/bundle/vscode-app`](../../packages/bundle/vscode-app/README.md) | Long-lived Host composition, permission choices, and tool restrictions. |
 
-## Next Work Package: P2.2
+## Accepted P2 Evidence
 
-Start P2.2 only after the user explicitly requests it. Deliver the typed stdio Host client additions, long-lived `events.mux` and `events.host` subscriptions, server-request responses for approval interactions, request cancellation, rejection of pending operations on process exit, subscription disposal, and reconnect reconciliation. Host API schemas remain the wire authority; do not add a parallel VS Code protocol or reuse the browser Cordis UI shell.
+The user completed the [P2 acceptance tutorial](p2-acceptance.md) with a real provider on 2026-08-25. The accepted path includes runtime and model persistence, ordinary conversation and tools, bounded context, project Skill creation and slash invocation, exact Diff rejection, stale-Diff protection, one-shot approval, Shell disclosure, all three permissions, cancellation, restart, and window-reopen recovery.
 
-P2.2 stops at the protocol and event-folding foundation. Do not build the conversation Webview, session list, composer, editor context, Skill experience, Diff approval interface, or permission-mode UI for active sessions; those belong to P2.3–P2.6.
-
-Before asking for P2.2 acceptance, tests must cover split input frames, stream termination, historical/live overlap handling, response correlation, cancellation, child exit, disposal, and restart. Report the changed files, commands actually run, remaining limitations, and a short Chinese acceptance procedure, then wait for the user.
+The automated assembled flow starts a real stdio fixture process through `RuntimeManager`, creates and restores a session, persists context and Skill invocation, projects tool lifecycle and approvals, proves rejection leaves the file unchanged, proves one-shot allowance applies the exact edit, and verifies that private reasoning text never reaches the view model. A built `vscode` profile smoke covers real bundle boot and Host APIs without a model credential.
 
 ## Security and Environment Constraints
 
-- No provider API key belongs in source, settings JSON, command arguments, logs, snapshots, fixtures, or documentation. The credential disclosed in the prior conversation must be rotated before any real-provider test.
-- P2.2 protocol work is keyless. Use deterministic fixtures; do not make a real model call merely to validate framing, streams, cancellation, or reconnect behavior.
-- The Extension Host child receives only the environment allowlist plus extension-managed credential references. Do not restore ambient provider-variable inheritance.
-- `pnpm run doc-sync` has one accepted host-specific failure when the Windows environment cannot create required symlinks with `EPERM`. Run focused document checks and report that exact limitation without treating it as a product regression.
-- The local fallback runtime uses the installed Node executable and the built `apps/cli/lib/bin.js --profile vscode` entry when `dsh` is unavailable on `PATH`; the [P2.1 acceptance tutorial](p2-1-acceptance.md) contains the launch procedure.
+- Provider API keys never enter source, settings JSON, command arguments, logs, snapshots, fixtures, or documentation. Credentials disclosed in prior conversation must be rotated before a real provider task.
+- The child receives only the environment allowlist and extension-managed credential references; ambient provider variables remain excluded.
+- Binary, invalid UTF-8, oversized context, and oversized or stale Diff inputs fail visibly instead of truncating or approving silently.
+- A Windows host that cannot create repository test symlinks returns `EPERM` from one `doc-sync` leaf and the NodeNext consumer check. Report the host limitation without classifying it as a product regression.
+- When `dsh` is absent from `PATH`, configure the installed Node executable and built `apps/cli/lib/bin.js --profile vscode` fallback described in the acceptance tutorial.
+
+## Next Development Focus
+
+Work after P2 should proceed in three ordered themes:
+
+1. **Stability and onboarding.** Remove manual runtime-path setup, package a reliable launch path, improve first-run diagnosis, preserve settings across ordinary window and view changes, and turn accepted workflows into deterministic regression coverage.
+2. **Distribution and reuse.** Produce an installable extension artifact, define supported VS Code/Node/OS versions, document installation and upgrade paths, provide safe configuration export without credentials, and supply reusable project templates and Skills.
+3. **Product improvement.** Use observed user friction to improve conversation navigation, approval prominence, recovery, accessibility, localization, diagnostics, and longer-session performance before adding broad new agent capabilities.
+
+Keep SecretStorage as the credential owner, preserve the Host API and session log as the authoritative runtime records, and retain exact pre-execution review for modifying operations. Do not make configuration portability include credential values, and do not weaken review guarantees to simplify packaging.
 
 ## Continuation Procedure
 
-The user can start the next stage with: `Read docs/vscode/development-handoff.zh.md completely, then start P2.2 and stop for my acceptance when P2.2 is complete.`
-
-After receiving that instruction, inspect the working tree, read the linked architecture and defensive rules, confirm that P2.2 remains the active scope, implement only that work package, run the smallest relevant checks, update its owning documentation and Agent Note, provide Chinese acceptance steps, and stop before P2.3.
+Inspect the worktree and current branch, read the linked authorities, and define whether the next request belongs to stability, distribution, or product improvement. Record non-trivial decisions in the owning Agent Note, add keyless assembled evidence for user-visible behavior, update bilingual documentation, run the smallest checks that cover the change, and stop at the requested acceptance boundary.
